@@ -1,5 +1,5 @@
 # DRO from data
-Numerical experiments for paper "On the data-driven combinatorial optimization with incomplete information"
+Numerical experiments for the paper "On the data-driven combinatorial optimization with incomplete information"
 
 ## Introduction
 We propose the solution technique for the linear combinatorial optimization problem with the cost vectors unknown a priori. The weak optimality of our solution is proved in paper. In these experiments we show that the proposed technique dominates the baseline, which exploits Hoeffding's inequality.
