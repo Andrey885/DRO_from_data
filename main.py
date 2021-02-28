@@ -15,7 +15,7 @@ np.random.seed(4)
 
 def Cnk(n, k):
     f = math.factorial
-    return f(n) / f(k) / f(n-k)
+    return f(n) / (f(k) * f(n-k))
 
 
 def get_c_worst_hoefding(c_hat, T, m, d, alpha=0.05):
@@ -112,7 +112,7 @@ def solve_part(q_hat, alpha, T_min, T_max, T, mode='same_ra'):
     c_worst = []
     for a in range(len(q_hat)):
         if mode == 'different_ra':
-            ra = -1 / T[a] * math.log(alpha / (len(q_hat) * Cnk(T[a] + d - 1, d-1)))
+            ra = -1 / T[a] * math.log(alpha / (len(q_hat) * Cnk(T[a] + d - 1, d - 1)))
         d_ = np.max(np.argwhere(q_hat[a] != 0)[:, 0])  # last non zero value of free
         # min_value = solve_cvx_dual(q_hat[a], ra)
         min_value = solve_cvx_primal(q_hat[a], ra)
@@ -195,7 +195,7 @@ def main():
     edges_num_dict = graph_utils.numerate_edges(g)
     start_node = 0
     finish_node = list(g.nodes)[-1]
-    run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=True)
+    # run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=True)  # test run
     if args.debug != '':
         exit()
     solutions_hoef = []
