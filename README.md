@@ -18,10 +18,11 @@ We aim at deriving the less conservative solution. It means that the solution mu
 
 We hold *3* experiment modes with different dataset distribution construction techniques.
 
-* **'uniform'** mode
+* **'binomial_uniform_T'** mode
 
 For each arc we generate probability _p_ and samples number _T_ from *uniform* distribution. Then we generate _T_ points from *binomial* distribution with parameters (_d_, _p_), where _d_ is the number of possible weight's values. 
-* **'binomial'** mode
+
+* **'binomial_binomial_T'** mode
 
 In this experiment we study the influence of dataset size. We generate fewer samples with low weights. This results in less robust estimations on those arcs which are likely to be optimal. In order to do that we first generate the nominal expectations using _uniform_ mode, and then for each arc _a_ we generate dataset size number _T_ from binomial distribution with parameters (<img src="https://render.githubusercontent.com/render/math?math=T_{max} - T_{min}"> + 1, p). After that the _T_ points for each arc _a_ are generated from _binomial_ distribution with parameters (_d, p_).
 
@@ -31,12 +32,12 @@ In this experiment we study the influence of dependence between different arcs w
 
 ## Results
 
-The results are expressed in the following table. Each number is the ratio of derived solution to nominal solution. Smallest numbers are the best, but they cannot not be less than 1 due to feasibility constraint.
+The results are expressed in the following table. Each number is the ratio of derived solution to nominal solution. Smallest numbers are the best, but they cannot not be less than 1 due to feasibility constraint. The parameters are default (h=w=5, T_min=10, T_max=100)
 
 | Distribution        | DRO technique          |  Hoeffding's technique |
 | ------------- |:-------------:| -----:|
-|   uniform   | **1.429 ± 0.130** | 1.686 ± 0.252 |
-| binomial      | **1.440 ± 0.167** | 2.299 ± 0.654 |
-| multinomial | **1.546 ± 0.164** | 2.73 ± 0.306 |
+|   binomial_uniform_T   | **1.383 ± 0.115** | 1.578 ± 0.190 |
+| binomial_binomial_T      | **1.378 ± 0.154** | 1.869 ±  0.298 |
+| multinomial | **1.107 ± 0.09** | 1.75 ± 0.05 |
 
 The table shows that the proposed solution outperforms the baseline in each experiment.
