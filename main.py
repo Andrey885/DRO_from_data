@@ -39,10 +39,9 @@ def solve_cvx_primal(qai_hat_a, ra):
     sum_a = 0
     sum_kl_dist = 0
     for i in range(d):
-        if qai_hat_a[i] == 0:
-            constraints.append(q[i] == 0)
-            continue
         sum_a += q[i]
+        if qai_hat_a[i] == 0:
+            continue
         objective_func += (i + 1) * q[i]
         sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
     constraints.append(sum_a == 1)
