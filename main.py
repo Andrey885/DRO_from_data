@@ -152,35 +152,34 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
                                                                                            verbose=verbose)
     c_worst_hoef = get_c_worst_hoefding(c_hat, T, len(g.edges), d=args.d, alpha=args.alpha)
 
-    _, path_c_bar = graph_utils.solve_cplex(c_bar, edges_num_dict, g, start_node, finish_node,
-                                                 verbose=False)  # nominal solution
+    nominal_expected_loss, path_c_bar = graph_utils.solve_cplex(c_bar, edges_num_dict, g, start_node, finish_node,
+                                                                verbose=False)  # nominal solution
     _, path_c_worst_hoefding = graph_utils.solve_cplex(c_worst_hoef, edges_num_dict, g, start_node, finish_node,
-                                                 verbose=False)  # nominal solution
+                                                                verbose=False)  # nominal solution
 
-    solution_hoef = np.sum(path_c_worst_hoefding * c_worst_hoef)
-    nominal_solution_hoef = np.sum(path_c_worst_hoefding * c_bar)
+    solution_hoef = np.sum(path_c_worst_hoefding * c_bar)
     q_hat = get_q_distribution(c_hat, args.d)
     c_worst_dro = solve_part(q_hat, args.alpha, args.T_min, args.T_max, T, args.ra_choice)
 
     _, path_c_worst_dro = graph_utils.solve_cplex(c_worst_dro, edges_num_dict, g, start_node, finish_node,
                                                  verbose=False)  # nominal solution
 
-    solution_dro = np.sum(path_c_worst_dro * c_worst_dro)
-    nominal_solution_dro = np.sum(path_c_worst_dro * c_bar)
+    solution_dro = np.sum(path_c_worst_dro * c_bar)
+
     failed = {'hoef': np.mean(c_worst_hoef < c_bar), 'dro': np.mean(c_worst_dro < c_bar)}
     if verbose:
-        print("Solution hoef:", solution_hoef / nominal_solution_hoef)
-        print("Solution DRO:", solution_dro / nominal_solution_dro)
-    return solution_hoef / nominal_solution_hoef, solution_dro / nominal_solution_dro, failed
+        print("Solution hoef:", solution_hoef / nominal_expected_loss)
+        print("Solution DRO:", solution_dro / nominal_expected_loss)
+    return solution_hoef / nominal_expected_loss, solution_dro / nominal_expected_loss, failed
 
 
 def main():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('--debug', type=str, default='', help='debug mode', choices=['', 'true'])
-    parser.add_argument('--h', type=int, default=2,
+    parser.add_argument('--h', type=int, default=5,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=5, help='num of different possible weights values')
+    parser.add_argument('--d', type=int, default=10, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=10, help='min samples num')
     parser.add_argument('--T_max', type=int, default=100, help='max samples num')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
