@@ -135,7 +135,7 @@ def get_q_distribution(c_hat, d):
 
 
 def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
-    if args.mode == 'binomial':
+    if args.mode == 'binomial_binomial_T':
         c_hat, c_bar, T, p = distribution_utils.create_weights_distribution_with_binomial_T(len(g.edges), d=args.d,
                                                                                             T_min=args.T_min,
                                                                                             T_max=args.T_max,
@@ -145,7 +145,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
                                                                                                T_min=args.T_min,
                                                                                                T_max=args.T_max,
                                                                                                verbose=verbose)
-    elif args.mode == 'uniform':
+    elif args.mode == 'binomial_uniform_T':
         c_hat, c_bar, T, p = distribution_utils.create_weights_distribution_from_uniform_T(len(g.edges), d=args.d,
                                                                                            T_min=args.T_min,
                                                                                            T_max=args.T_max,
@@ -188,8 +188,8 @@ def main():
     parser.add_argument('--ra_choice', type=str, default='different_ra',
                         help='formula for KL-dist constraint ("different_ra" is preferred)',
                         choices=['different_ra', 'same_ra'])
-    parser.add_argument('--mode', type=str, default='uniform', help='number of runs with different distributions',
-                        choices=['binomial', 'multinomial', 'uniform'])
+    parser.add_argument('--mode', type=str, default='binomial_uniform_T', help='number of runs with different distributions',
+                        choices=['binomial_binomial_T', 'multinomial', 'binomial_uniform_T'])
     args = parser.parse_args()
     g = graph_utils.create_fc_graph(args.h, args.w)
     edges_num_dict = graph_utils.numerate_edges(g)
