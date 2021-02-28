@@ -36,8 +36,8 @@ The results are expressed in the following table. Each number is the ratio of de
 
 | Distribution        | DRO technique          |  Hoeffding's technique |
 | ------------- |:-------------:| -----:|
-|   binomial_uniform_T   | **1.383 ± 0.115** | 1.578 ± 0.190 |
-| binomial_binomial_T      | **1.378 ± 0.154** | 1.869 ±  0.298 |
-| multinomial | **1.107 ± 0.09** | 1.75 ± 0.05 |
+|   binomial_uniform_T   | **1.016 ± 0.037** | 1.068 ± 0.085 |
+| binomial_binomial_T      | **1.035 ± 0.051** | 1.130 ±  0.145 |
+| multinomial | **1.023 ± 0.014** | 1.049 ± 0.019 |
 
 The table shows that the proposed solution outperforms the baseline in each experiment.
