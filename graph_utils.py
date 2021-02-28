@@ -131,5 +131,5 @@ def create_fc_graph(h, w):
     g.add_node(node_num)
     [g.add_edge(last_layer_node, node_num) for last_layer_node in current_layer_nodes]
 
-    print("Generated graph: \n", networkx.to_dict_of_dicts(g))
+    # print("Generated graph: \n", networkx.to_dict_of_dicts(g))
     return g

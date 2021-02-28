@@ -40,10 +40,9 @@ def solve_cvx_primal(qai_hat_a, ra):
     sum_kl_dist = 0
     for i in range(d):
         sum_a += q[i]
-        if qai_hat_a[i] == 0:
-            continue
         objective_func += (i + 1) * q[i]
-        sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
+        if qai_hat_a[i] != 0:
+            sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
     constraints.append(sum_a == 1)
     constraints.append(sum_kl_dist <= ra)
     objective = cp.Maximize(objective_func)
@@ -171,8 +170,8 @@ def main():
     parser.add_argument('--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--h', type=int, default=2,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=10, help='num of different possible weights values')
+    parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--d', type=int, default=5, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=10, help='min samples num')
     parser.add_argument('--T_max', type=int, default=100, help='max samples num')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
