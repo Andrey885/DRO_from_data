@@ -40,9 +40,11 @@ def solve_cvx_primal(qai_hat_a, ra):
     sum_kl_dist = 0
     for i in range(d):
         sum_a += q[i]
+        if qai_hat_a[i] == 0:
+            # constraints.append(q[i] == 0)
+            continue
         objective_func += (i + 1) * q[i]
-        if qai_hat_a[i] != 0:
-            sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
+        sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
     constraints.append(sum_a == 1)
     constraints.append(sum_kl_dist <= ra)
     objective = cp.Maximize(objective_func)
@@ -115,7 +117,8 @@ def solve_part(q_hat, alpha, T_min, T_max, T, mode='same_ra'):
         # min_value = solve_cvx_dual(q_hat[a], ra)
         min_value = solve_cvx_primal(q_hat[a], ra)
         # another minimization method for dual task. Gives exact same result:
-        # min_value = scipy.optimize.minimize(objective_function, x0=d+1, method='Nelder-Mead')['fun']
+        min_value2 = scipy.optimize.minimize(objective_function, x0=d+1, method='Nelder-Mead')['fun']
+        assert abs(min_value2 - min_value) < 1e-3, (min_value2, min_value)
         if type(min_value) == np.ndarray:
             min_value = min_value[0]
         c_worst.append(min_value)
@@ -149,20 +152,26 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
                                                                                            verbose=verbose)
     c_worst_hoef = get_c_worst_hoefding(c_hat, T, len(g.edges), d=args.d, alpha=args.alpha)
 
-    y_star, values_c_bar = graph_utils.solve_cplex(c_bar, edges_num_dict, g, start_node, finish_node,
-                                                   verbose=False)  # nominal solution
+    _, path_c_bar = graph_utils.solve_cplex(c_bar, edges_num_dict, g, start_node, finish_node,
+                                                 verbose=False)  # nominal solution
+    _, path_c_worst_hoefding = graph_utils.solve_cplex(c_worst_hoef, edges_num_dict, g, start_node, finish_node,
+                                                 verbose=False)  # nominal solution
 
-    solution_hoef = np.sum(values_c_bar * c_worst_hoef)
+    solution_hoef = np.sum(path_c_worst_hoefding * c_worst_hoef)
+    nominal_solution_hoef = np.sum(path_c_worst_hoefding * c_bar)
     q_hat = get_q_distribution(c_hat, args.d)
     c_worst_dro = solve_part(q_hat, args.alpha, args.T_min, args.T_max, T, args.ra_choice)
-    # _, values_c_bar = graph_utils.solve_cplex(c_worst_dro, edges_num_dict, g, start_node,
-    #                                           finish_node, verbose=False)  # nominal solution, better solution
-    solution_dro = np.sum(values_c_bar * c_worst_dro)
-    failed = {'hoef': np.mean(c_worst_hoef < values_c_bar), 'dro': np.mean(c_worst_dro < values_c_bar)}
+
+    _, path_c_worst_dro = graph_utils.solve_cplex(c_worst_dro, edges_num_dict, g, start_node, finish_node,
+                                                 verbose=False)  # nominal solution
+
+    solution_dro = np.sum(path_c_worst_dro * c_worst_dro)
+    nominal_solution_dro = np.sum(path_c_worst_dro * c_bar)
+    failed = {'hoef': np.mean(c_worst_hoef < c_bar), 'dro': np.mean(c_worst_dro < c_bar)}
     if verbose:
-        print("Solution hoef:", solution_hoef / y_star)
-        print("Solution DRO:", solution_dro / y_star)
-    return solution_hoef / y_star, solution_dro / y_star, failed
+        print("Solution hoef:", solution_hoef / nominal_solution_hoef)
+        print("Solution DRO:", solution_dro / nominal_solution_dro)
+    return solution_hoef / nominal_solution_hoef, solution_dro / nominal_solution_dro, failed
 
 
 def main():
