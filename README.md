@@ -41,3 +41,12 @@ The results are expressed in the following table. Each number is the ratio of de
 | multinomial | **1.023 ± 0.014** | 1.049 ± 0.019 |
 
 The table shows that the proposed solution outperforms the baseline in each experiment.
+
+Same result generally holds for bigger datasets (T_min=100, T_max=1000):
+
+| Distribution        | DRO technique          |  Hoeffding's technique |
+| ------------- |:-------------:| -----:|
+|   binomial_uniform_T   | **1.003 ± 0.010** | 1.006 ± 0.017 |
+| binomial_binomial_T      | 1.006 ± 0.017 | **1.002 ±  0.006** |
+| multinomial | **1.010 ± 0.011** | 1.03 ± 0.015 |
+
