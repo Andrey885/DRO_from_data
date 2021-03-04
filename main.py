@@ -175,7 +175,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
     return solution_hoef / nominal_expected_loss, solution_dro / nominal_expected_loss, failed
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--h', type=int, default=5,
@@ -192,6 +192,11 @@ def main():
     parser.add_argument('--mode', type=str, default='binomial_uniform_T', help='number of runs with different distributions',
                         choices=['binomial_binomial_T', 'multinomial', 'binomial_uniform_T'])
     args = parser.parse_args()
+    return args
+
+
+def main():
+    args = parse_args()
     g = graph_utils.create_fc_graph(args.h, args.w)
     edges_num_dict = graph_utils.numerate_edges(g)
     start_node = 0
