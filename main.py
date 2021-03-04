@@ -31,8 +31,8 @@ def get_c_worst_hoefding(c_hat, T, m, d, alpha=0.05):
     return c_worst
 
 
-def solve_cvx_primal(qai_hat_a, ra):
-    d = qai_hat_a.shape[0]
+def solve_cvx_primal(q_hat_a, ra):
+    d = q_hat_a.shape[0]
     q = cp.Variable(d)
     constraints = [q >= 0, q <= 1]
     objective_func = 0
@@ -40,11 +40,11 @@ def solve_cvx_primal(qai_hat_a, ra):
     sum_kl_dist = 0
     for i in range(d):
         sum_a += q[i]
-        if qai_hat_a[i] == 0:
+        if q_hat_a[i] == 0:
             # constraints.append(q[i] == 0)
             continue
         objective_func += (i + 1) * q[i]
-        sum_kl_dist += qai_hat_a[i] * (np.log(qai_hat_a[i]) - cp.log(q[i]))
+        sum_kl_dist += q_hat_a[i] * (np.log(q_hat_a[i]) - cp.log(q[i]))
     constraints.append(sum_a == 1)
     constraints.append(sum_kl_dist <= ra)
     objective = cp.Maximize(objective_func)
@@ -55,28 +55,28 @@ def solve_cvx_primal(qai_hat_a, ra):
     return prob.solution.opt_val
 
 
-def solve_cvx_dual(qai_hat_a, ra):
+def solve_cvx_dual(q_hat_a, ra):
     """
     This function fails as cvxpy does not recognize the problem as DCP due to numerical issues.
     It is replaced with solve_cvx_primal.
     """
-    assert abs(np.sum(qai_hat_a) - 1) < 1e-3
+    assert abs(np.sum(q_hat_a) - 1) < 1e-3
     alpha_a = cp.Variable(1)
-    d_ = np.max(np.argwhere(qai_hat_a != 0)[:, 0]) + 1  # last non zero value of freq
+    d_ = np.max(np.argwhere(q_hat_a != 0)[:, 0]) + 1  # last non zero value of freq
     # total_sum = 0
     # exponential_part = 0
     # for i in range(d_):
-    #     total_sum += qai_hat_a[i]
-    #     exponential_part += qai_hat_a[i] * cp.log(alpha_a - i - 1)
-    #     val = (d_ - i - 1) ** qai_hat_a[i]
+    #     total_sum += q_hat_a[i]
+    #     exponential_part += q_hat_a[i] * cp.log(alpha_a - i - 1)
+    #     val = (d_ - i - 1) ** q_hat_a[i]
     #     assert val == val
     # assert abs(total_sum - 1) < 1e-3
     multiple_part = 1
     total_sum = 0
     for i in range(d_):
-        total_sum += qai_hat_a[i]
-        multiple_part *= (alpha_a - i - 1) ** qai_hat_a[i]
-        val = (d_ - i - 1) ** qai_hat_a[i]
+        total_sum += q_hat_a[i]
+        multiple_part *= (alpha_a - i - 1) ** q_hat_a[i]
+        val = (d_ - i - 1) ** q_hat_a[i]
         assert val == val
     assert abs(total_sum - 1) < 1e-3
     # objective_func = alpha_a + np.exp(-ra) * multiple_part
@@ -106,13 +106,14 @@ def solve_part(q_hat, alpha, T_min, T_max, T, mode='same_ra'):
         return objective_func
 
     d = q_hat.shape[1]
+    m = len(q_hat)
     if mode == 'same_ra':
-        ra = -1 / T_min * math.log(alpha / len(q_hat) / math.pow(T_max + 1, d))  # old mode
+        ra = -1 / T_min * math.log(alpha / m / math.pow(T_max + 1, d))  # old mode
 
     c_worst = []
-    for a in range(len(q_hat)):
+    for a in range(m):
         if mode == 'different_ra':
-            ra = -1 / T[a] * math.log(alpha / (len(q_hat) * Cnk(T[a] + d - 1, d - 1)))
+            ra = -1 / T[a] * math.log(alpha / (m * Cnk(T[a] + d - 1, d - 1)))
         d_ = np.max(np.argwhere(q_hat[a] != 0)[:, 0])  # last non zero value of free
         # min_value = solve_cvx_dual(q_hat[a], ra)
         min_value = solve_cvx_primal(q_hat[a], ra)
@@ -127,9 +128,10 @@ def solve_part(q_hat, alpha, T_min, T_max, T, mode='same_ra'):
 
 
 def get_q_distribution(c_hat, d):
+    m = len(c_hat)
     q_hat = np.zeros((len(c_hat), d))
     for i in range(1, d+1):
-        for a in range(len(c_hat)):
+        for a in range(m):
             q_hat[a, i-1] = np.mean(c_hat[a] == i)
     return q_hat
 
@@ -155,14 +157,14 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
     nominal_expected_loss, path_c_bar = graph_utils.solve_cplex(c_bar, edges_num_dict, g, start_node, finish_node,
                                                                 verbose=False)  # nominal solution
     _, path_c_worst_hoefding = graph_utils.solve_cplex(c_worst_hoef, edges_num_dict, g, start_node, finish_node,
-                                                                verbose=False)  # nominal solution
+                                                       verbose=False)  # nominal solution
 
     solution_hoef = np.sum(path_c_worst_hoefding * c_bar)
     q_hat = get_q_distribution(c_hat, args.d)
     c_worst_dro = solve_part(q_hat, args.alpha, args.T_min, args.T_max, T, args.ra_choice)
 
     _, path_c_worst_dro = graph_utils.solve_cplex(c_worst_dro, edges_num_dict, g, start_node, finish_node,
-                                                 verbose=False)  # nominal solution
+                                                  verbose=False)  # nominal solution
 
     solution_dro = np.sum(path_c_worst_dro * c_bar)
 
