@@ -79,7 +79,7 @@ def solve_cvx_dual_individual(q_hat_a, r_a):
 
 
 def count_classic_cnk_ra(T_a, alpha, d, m):
-    return -1 / T_a * math.log(alpha / (m * Cnk(T[a] + d - 1, d - 1)))
+    return -1 / T_a * math.log(alpha / (m * Cnk(T_a + d - 1, d - 1)))
 
 
 def count_agrawal_ra(T_a, alpha, d, m):
@@ -116,7 +116,7 @@ def count_mardia_ra(T_a, alpha, d, m):
             denominator = np.prod(np.arange(2, j + 1, 2))
         else:
             nomirator = np.prod(np.arange(2, j, 2)) * 2
-            denominator = np.prod(np.arange(1, j, 2))
+            denominator = np.prod(np.arange(1, j + 1, 2))
         assert nomirator > 0 and denominator > 0, f"Value overflow processing c_{j}! Please decrease d"
         return nomirator / denominator
 
@@ -124,7 +124,9 @@ def count_mardia_ra(T_a, alpha, d, m):
         """
         Equality (14) of paper
         """
-        if m % 2 == 0:
+        if m == -1:
+            return 1
+        elif m % 2 == 0:
             nomirator = math.pi * math.pow(2 * math.pi, m//2)
             denominator = np.prod(np.arange(2, m + 1, 2))
         else:
@@ -136,10 +138,10 @@ def count_mardia_ra(T_a, alpha, d, m):
     # is it OK that estimation is not strictly e^(-T_a r_a), but sqrt(T_a) * e^(-T_a r_a) ?
     square_bracket = 0  # equation (15)
     k = d  # paper notation
-    K_i_minus1 = 1
+    K_i = 1  # k_{-1}
     for i in range(k - 1):
-        square_bracket += (K_i_minus1 * math.pow(math.e * math.sqrt(T_a) / (2 * math.pi), i))
-        K_i_minus1 *= get_cj(i)
+        square_bracket += (K_i * math.pow(math.e * math.sqrt(T_a) / (2 * math.pi), i))
+        K_i *= get_cj(i)
     square_bracket *= (3 * get_cj(1) / get_cj(2))
     ra = - 1 / T_a * math.log(alpha / (m * square_bracket))
     return ra
@@ -252,7 +254,7 @@ def parse_args():
     parser.add_argument('--ra_choice', type=str, default='classic_cnk', help='choose the radius calculation algorithm',
                         choices=['classic_cnk', 'Agrawal', 'Mardia'])
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
-    parser.add_argument('--num_exps', type=int, default=10, help='number of runs with different distributions')
+    parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'multinomial', 'binomial', 'normal'])
     args = parser.parse_args()
