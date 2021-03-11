@@ -38,12 +38,13 @@ def solve_cvx_primal_individual(q_hat_a, r_a, d):
     q = cp.Variable(d)
     constraints = [q >= 0, q <= 1]
     objective_func = 0
+
     prob_sum = 0
     sum_kl_dist = 0
     for i in range(d):
         prob_sum += q[i]
+        objective_func += (i + 1) * q[i]
         if q_hat_a[i] != 0:
-            objective_func += (i + 1) * q[i]
             sum_kl_dist += q_hat_a[i] * (np.log(q_hat_a[i]) - cp.log(q[i]))
 
     constraints.append(prob_sum == 1)
@@ -90,15 +91,20 @@ def count_agrawal_ra(T_a, alpha, d, m):
     k = d  # paper notation
     n = T_a  # paper notation
 
-    right_part = alpha / m
-    left_part_mulitpier = math.pow(math.e * T_a / (d - 1), d - 1)
+    right_part = math.log(alpha / m)
+
     def objective_function(ra):
         """
         Solve transcendent equation by minimizing difference between left and right part
         """
-        return abs(left_part_mulitpier * math.pow(ra, d-1) * math.exp(-ra * T_a) - right_part)
+        if ra < (d-1) / T_a:
+            return 1e5
+        return abs(-ra * T_a + (d - 1) * math.log(math.e * ra * T_a / (d - 1)) - right_part)
     min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
     ra = min_value['x'][0]
+    solution = min_value['fun']
+    if abs(solution) > 1e-3:  # the solution has failed
+        return np.inf
     return ra
 
 def count_mardia_ra(T_a, alpha, d, m):
@@ -112,13 +118,21 @@ def count_mardia_ra(T_a, alpha, d, m):
         elif j == 1:
             return 2
         elif j % 2 == 0:
-            nomirator = np.prod(np.arange(1, j, 2)) * math.pi
-            denominator = np.prod(np.arange(2, j + 1, 2))
+            # nominator = np.prod(np.arange(1, j, 2)) * math.pi
+            # denominator = np.prod(np.arange(2, j + 1, 2))
+            result = 1
+            for i in range(j // 2):
+                result *= ((2*i + 1) / (2 * i + 2))
+            result *= math.pi
         else:
-            nomirator = np.prod(np.arange(2, j, 2)) * 2
-            denominator = np.prod(np.arange(1, j + 1, 2))
-        assert nomirator > 0 and denominator > 0, f"Value overflow processing c_{j}! Please decrease d"
-        return nomirator / denominator
+            # nominator = np.prod(np.arange(2, j, 2)) * 2
+            # denominator = np.prod(np.arange(1, j + 1, 2))
+            result = 1
+            for i in range( (j + 1) // 2):
+                result *= ((2*i + 2) / (2 * i + 1))
+            result *= (2 / (j + 1))
+        # assert nominator > 0 and denominator > 0, f"Value overflow processing c_{j}! Please decrease d"
+        return result
 
     def get_km(m):
         """
@@ -147,17 +161,17 @@ def count_mardia_ra(T_a, alpha, d, m):
     return ra
 
 
-def get_c_worst_DRO(q_hat, alpha, T, ra_choice):
+def get_c_worst_DRO(q_hat, alpha, T):
     """
     Solve with different radiuses
     """
     def objective_function(alpha_a):
         multiple_part = 1
-        d_a = np.max(np.argwhere(q_hat[a] != 0)[:, 0]) + 1  # last non zero value of freq
-        if alpha_a < d_a:
+
+        if alpha_a < d:
             return 1e5
 
-        for i in range(d_a):
+        for i in range(d):
             multiple_part *= (alpha_a - (i + 1)) ** q_hat[a, i]
 
         objective_func = alpha_a - np.exp(-r_a) * multiple_part
@@ -168,12 +182,10 @@ def get_c_worst_DRO(q_hat, alpha, T, ra_choice):
 
     c_worst = []
     for a in range(m):
-        if ra_choice == 'classic_cnk':
-            r_a = count_classic_cnk_ra(T[a], alpha, d, m)
-        elif ra_choice == 'Mardia':
-            r_a = count_mardia_ra(T[a], alpha, d, m)
-        elif ra_choice == 'Agrawal':
-            r_a = count_agrawal_ra(T[a], alpha, d, m)
+        r_a1 = count_classic_cnk_ra(T[a], alpha, d, m)
+        r_a2 = count_mardia_ra(T[a], alpha, d, m)
+        r_a3 = count_agrawal_ra(T[a], alpha, d, m)
+        r_a = min(r_a1, r_a2, r_a3)
 
         # min_value = solve_cvx_dual_individual(q_hat[a], r_a)
         min_value, alpha_a_primal = solve_cvx_primal_individual(q_hat[a], r_a, d)
@@ -198,7 +210,6 @@ def get_q_distribution(c_hat, d):
     for a in range(m):
         for i in range(d):
             q_hat[a, i] = np.mean(c_hat[a] == i + 1)
-    # print(q_hat.shape)
     assert np.max(np.abs(np.sum(q_hat, axis=1) - 1)) < 1e-3, q_hat.shape
     return q_hat
 
@@ -229,32 +240,41 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
 
     # DRO
     q_hat = get_q_distribution(c_hat, args.d)
-    c_worst_dro = get_c_worst_DRO(q_hat, args.alpha, T, ra_choice=args.ra_choice)
+    c_worst_dro = get_c_worst_DRO(q_hat, args.alpha, T)
     _, path_c_worst_dro = graph_utils.solve_shortest_path(c_worst_dro.astype(float), edges_num_dict, g, start_node,
                                                           finish_node, verbose=False)
     expected_loss_dro = np.sum(path_c_worst_dro * c_bar)
+
+    # DRO on cropped data (compare with strongly optimal solution)
+    min_length = min([c.shape[0] for c in c_hat])
+    c_hat_cropped = [c[:min_length] for c in c_hat]
+    q_hat_cropped = get_q_distribution(c_hat_cropped, args.d)
+    c_worst_dro_cropped = get_c_worst_DRO(q_hat_cropped, args.alpha, T)
+    _, path_c_worst_dro_cropped = graph_utils.solve_shortest_path(c_worst_dro_cropped.astype(float), edges_num_dict,
+                                                                  g, start_node, finish_node, verbose=False)
+    expected_loss_dro_cropped = np.sum(path_c_worst_dro_cropped * c_bar)
 
     failed = {'hoef': np.mean(c_worst_hoef < c_bar), 'dro': np.mean(c_worst_dro < c_bar)}
     if verbose:
         print("Solution hoef:", expected_loss_hoeffding / nominal_expected_loss)
         print("Solution DRO:", expected_loss_dro / nominal_expected_loss)
-    return expected_loss_hoeffding / nominal_expected_loss, expected_loss_dro / nominal_expected_loss, failed
+        print("Solution DRO cropped:", expected_loss_dro_cropped / nominal_expected_loss)
+    return expected_loss_hoeffding / nominal_expected_loss, expected_loss_dro / nominal_expected_loss, \
+           expected_loss_dro_cropped / nominal_expected_loss, failed
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('--debug', type=str, default='', help='debug mode', choices=['', 'true'])
-    parser.add_argument('--h', type=int, default=5,
+    parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=10, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=10, help='min samples num')
-    parser.add_argument('--T_max', type=int, default=100, help='max samples num')
-    parser.add_argument('--alpha', type=int, default=1e-6, help='feasible error')
-    parser.add_argument('--ra_choice', type=str, default='classic_cnk', help='choose the radius calculation algorithm',
-                        choices=['classic_cnk', 'Agrawal', 'Mardia'])
+    parser.add_argument('--T_min', type=int, default=50, help='min samples num')
+    parser.add_argument('--T_max', type=int, default=60, help='max samples num')
+    parser.add_argument('--alpha', type=int, default=0.00001, help='feasible error')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
-    parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
+    parser.add_argument('--num_exps', type=int, default=10, help='number of runs with different distributions')
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'multinomial', 'binomial', 'normal'])
     args = parser.parse_args()
@@ -272,17 +292,20 @@ def main():
         exit()
     solutions_hoef = []
     solutions_dro = []
+    solutions_dro_cropped = []
     all_failed = []
     for _ in tqdm(range(args.num_exps)):
-        solution_hoef, solution_dro, failed = run_graph(g, edges_num_dict, args, start_node, finish_node)
+        solution_hoef, solution_dro, solution_dro_cropped, failed = run_graph(g, edges_num_dict, args, start_node, finish_node)
         solutions_hoef.append(solution_hoef)
         solutions_dro.append(solution_dro)
+        solutions_dro_cropped.append(solution_dro_cropped)
         all_failed.append(failed)
     all_failed = {key: [f[key] for f in all_failed] for key in failed}
     all_failed = {key: np.mean(all_failed[key]) for key in all_failed}
     print("FINAL RESULT (method solution / nominal solution):")
     print("HOEFDING:", np.mean(solutions_hoef), u"\u00B1", np.std(solutions_hoef))
     print(f"DRO METHOD {args.mode}:", np.mean(solutions_dro), u"\u00B1", np.std(solutions_dro))
+    # print(f"DRO CROPPED METHOD {args.mode}:", np.mean(solutions_dro_cropped), u"\u00B1", np.std(solutions_dro_cropped))
     print("Failed samples:", all_failed)
 
 
