@@ -227,7 +227,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
                                                                       T_max=args.T_max, verbose=verbose)
     elif args.mode == 'normal':
         c_hat, c_bar, T, _ = distribution_utils.create_normal_costs(m, d=args.d, T_min=args.T_min,
-                                                                      T_max=args.T_max, std=args.normal_std, verbose=verbose)
+                                                                    T_max=args.T_max, std=args.normal_std, verbose=verbose)
     # Nominal
     nominal_expected_loss, path_c_bar = graph_utils.solve_shortest_path(c_bar.astype(float), edges_num_dict, g,
                                                                         start_node, finish_node,
@@ -265,7 +265,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
-    parser.add_argument('--debug', type=str, default='', help='debug mode', choices=['', 'true'])
+    parser.add_argument('-d-', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')

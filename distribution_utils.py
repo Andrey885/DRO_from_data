@@ -5,7 +5,7 @@ import scipy.integrate
 import math
 
 
-def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=False):
+def get_binomial_T(m, d, T_min, T_max):
     # c_bar is the nominal mean of the generated data
     _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max)
 
@@ -14,19 +14,24 @@ def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=
     T_binomial = np.zeros(m, dtype=np.int32)
     for a in range(m):
         T_binomial[a] = scipy.stats.binom.rvs(n=T_max - T_min + 1, p=p[a]) + T_min
+    return T_binomial, p
+
+
+def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=False):
+    T_binomial, p = get_binomial_T(m, d, T_min, T_max)
     c_hat, c_bar = generate_binomial_samples(T_binomial, p, d, verbose=verbose)
     return c_hat, c_bar, T_binomial, p
 
 
 def create_multinomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
-    T = np.random.randint(T_min, T_max, size=m)  # uniform
+    T = np.random.randint(T_min, T_max + 1, size=m)  # uniform
     p = np.random.uniform(size=m)
     p /= np.sum(p)
 
     complete_multinomial_data = scipy.stats.multinomial.rvs(n=d-1, p=p, size=T_max).transpose(1, 0) + 1
     c_hat = []  # incomplete data for every edge
     for a in range(m):
-        c_hat.append(complete_multinomial_data[a, :T[a] - T_min + 1])
+        c_hat.append(complete_multinomial_data[a, :T[a]])
 
     c_bar = p * (d - 1) + 1  # the nominal mean for each arc
     if verbose:
@@ -43,6 +48,45 @@ def create_binomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
 
 
 def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
+    def count_disrete_gaussian_distribution(mean, std):
+        def gaussian(x):
+            return math.exp(- ((x - mean) ** 2) / (2 * (std ** 2))) / (math.sqrt(2 * math.pi) * std)
+
+        p = np.zeros(d)
+        p[0] = scipy.integrate.quad(gaussian, 0.5, 1.5)[0]
+        for i in range(1, d - 1):
+            p[i] = scipy.integrate.quad(gaussian, i+0.5, i+1.5)[0]
+        p[d-1] = scipy.integrate.quad(gaussian, d-0.5, d+0.5)[0]
+        p /= np.sum(p)
+        expectation = np.sum(np.linspace(1, d, d) * p)
+        return p, expectation
+
+    T, _ = get_binomial_T(m, d, T_min, T_max)  # binomial T
+    # T = np.random.randint(T_min, T_max + 1, size=m)  # uniform T
+    c_hat = []  # incomplete data for every arc
+    c_bar = np.zeros(m)
+    import matplotlib.pyplot as plt
+    for a in range(m):
+        mean = np.random.randint(1, d)
+        p, expectation = count_disrete_gaussian_distribution(mean, std)
+        p = np.concatenate((np.array([0]), p))
+        p = np.cumsum(p)
+        float_uniform_0_1_values = np.random.rand(T[a])
+        integer_normal_values = np.zeros(T[a])
+        for i in range(1, d+1):
+            integer_normal_values[(float_uniform_0_1_values >= p[i-1]) & (float_uniform_0_1_values <= p[i])] = i
+        c_hat.append(integer_normal_values)
+        c_bar[a] = expectation
+    if verbose:
+        print("Generated distribution")
+        print("Check mean estimation:", np.mean(c_hat[0]), c_bar[0])
+    return c_hat, c_bar, T, None
+
+
+def create_normal_costs_deprecated(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
+    """
+    The function is deprecated because the tails of gaussian "spoil" the disrete gaussian distribution.
+    """
     def gaussian(x):
         return math.exp(- ((x - mean) ** 2) / (2 * (std ** 2))) / (math.sqrt(2 * math.pi) * std)
 
