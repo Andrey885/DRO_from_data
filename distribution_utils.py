@@ -65,7 +65,28 @@ def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
     # T = np.random.randint(T_min, T_max + 1, size=m)  # uniform T
     c_hat = []  # incomplete data for every arc
     c_bar = np.zeros(m)
-    import matplotlib.pyplot as plt
+    for a in range(m):
+        mean = np.random.randint(1, d)
+        p, expectation = count_disrete_gaussian_distribution(mean, std)
+        p = np.concatenate((np.array([0]), p))
+        p = np.cumsum(p)
+        float_uniform_0_1_values = np.random.rand(T[a])
+        integer_normal_values = np.zeros(T[a])
+        for i in range(1, d+1):
+            integer_normal_values[(float_uniform_0_1_values >= p[i-1]) & (float_uniform_0_1_values <= p[i])] = i
+        c_hat.append(integer_normal_values)
+        c_bar[a] = expectation
+    if verbose:
+        print("Generated distribution")
+        print("Check mean estimation:", np.mean(c_hat[0]), c_bar[0])
+    return c_hat, c_bar, T, None
+
+
+def create_beta_binomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
+    T = np.random.randint(T_min, T_max + 1, size=m)  # uniform T
+    sigma = (d//2)**2
+    c_hat = []  # incomplete data for every arc
+    c_bar = np.zeros(m)
     for a in range(m):
         mean = np.random.randint(1, d)
         p, expectation = count_disrete_gaussian_distribution(mean, std)
