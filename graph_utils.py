@@ -3,6 +3,26 @@ import cplex
 import numpy as np
 
 
+def check_flow_balance_constraints(edges_num_dict, g, start_node, finish_node, x):
+    for node in g.nodes:
+        adj_edges = np.zeros(len(x))
+        right_part = None
+        for i in edges_num_dict[node]:
+            adj_edges[edges_num_dict[node][i]] = 1  # mark as 1 all outgoing arcs
+        for other_node in edges_num_dict:
+            if node in edges_num_dict[other_node] and other_node > node:
+                adj_edges[edges_num_dict[other_node][node]] = -1  # mark as -1 all incoming arcs
+        if node == start_node:
+            right_part = -1  # -1 is the right part of constraint for the start node
+        elif node == finish_node:
+            right_part = 1  # 1 is the right part of constraint for the finish node
+        else:
+            right_part = 0  # 0 is the right part of constraint for all nodes except start and finish
+        if np.dot(x, adj_edges) != right_part:
+            return False
+    return True
+
+
 def make_flow_balance_constraints(variable_names, num_variables, edges_num_dict, g, start_node, finish_node):
     """
     Make constraints for solving the shortest path problem in cplex
