@@ -166,15 +166,25 @@ def count_mardia_ra(T_a, alpha, d, m):
 def get_q_distribution_cropped(c_hat, d):
     m = c_hat.shape[1]
     T = c_hat.shape[0]
-    q_hat = np.zeros(T)
-    maximal_realizations_count = math.pow(m, d)
-    z = np.zeros((T, m))
+    # q_hat = np.zeros(T)
+    q_hat = []
+    # maximal_realizations_count = math.pow(m, d)
+    # z = np.zeros((T, m))
+    z = []
+    delete_array = np.zeros(T)
     for n in range(T):
         data_vector = c_hat[n]
+        if delete_array[n] == 1:
+            continue
         realizations_differences = np.sum((np.abs(c_hat - data_vector)), axis=1)
-        z[n] = c_hat[realizations_differences == 0][0]  # remember realization
+        # z[n] = c_hat[realizations_differences == 0][0]  # remember realization
+        delete_array[realizations_differences == 0] = 1
+        z.append(c_hat[realizations_differences == 0][0])
         sum_realizations = np.sum(realizations_differences == 0)
-        q_hat[n] = sum_realizations / maximal_realizations_count
+        # q_hat[n] = sum_realizations / T
+        q_hat.append(sum_realizations / T)
+    q_hat = np.array(q_hat)
+    z = np.array(z)
     return q_hat, z
 
 
@@ -182,14 +192,15 @@ def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
     def F(x, alpha):
         product = 1
         z_x_product = np.dot(z, x)
-        for n in range(T):
+        for n in range(len(z)):
             product *= math.pow(alpha - z_x_product[n], q_hat[n])
-        return alpha - math.pow(math.e, r) * product
+        # return alpha - math.pow(math.e, r) * product
+        return product
 
-    def find_alpha(x):  # the solution of minimizing with the first derivative
+    def find_alpha_deprecated(x):  # the solution of minimizing with the first derivative
         D = args.d * np.ones(m)
         alpha_lower_bound = np.dot(D, x)
-        F_alpha = functools.partial(F, x)
+        # F_alpha = functools.partial(F, x)
         def derivative_objective_function(alpha):
             if alpha < alpha_lower_bound:
                 return 1e5
@@ -200,30 +211,52 @@ def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
         alpha = derivative_solution['x'][0]
         solution_func_value = alpha - math.pow(math.e, r) * F(x, alpha)
         lower_bound_solution = alpha_lower_bound - math.pow(math.e, r) * F(x, alpha_lower_bound)
-        if abs(alpha - alpha_lower_bound) < 1e-3:
+        if abs(alpha - alpha_lower_bound) < 1e-1:
             alpha = alpha_lower_bound
             solution_func_value = lower_bound_solution
         assert derivative_solution['fun'] < 1e-3 or alpha == alpha_lower_bound, \
                f"Solution for alpha failed, {str(derivative_solution['fun'])} != 0"
         return alpha, solution_func_value
 
-    def find_x():
-        processed_x_dict = {}
-        def count_x_realization_score(x):
-            if str(x) in processed_x_dict:
-                return processed_x_dict[str(x)]
-            if not graph_utils.check_flow_balance_constraints(edges_num_dict, g, start_node, finish_node, x):
-                processed_x_dict[str(x)] = 1e5
+    def find_alpha(x):
+        D = args.d * np.ones(m)
+        alpha_lower_bound = np.dot(D, x)
+        F_alpha = functools.partial(F, x)
+        def objective_function(alpha):
+            if alpha < alpha_lower_bound:
                 return 1e5
-            else:
-                alpha_star, x_solution = find_alpha(x)
-                processed_x_dict[str(x)] = x_solution
-                return x_solution
+            product = F_alpha(alpha)
+            return alpha - math.pow(math.e, -r) * product
+        solution = scipy.optimize.minimize(objective_function, x0=alpha_lower_bound + 1, method='Nelder-Mead')
+        alpha = solution['x'][0]
+        sol = solution['fun']
+        assert sol < 1e5
 
-        x = np.ones(m)  # init
-        ranges = [[0, 1]] * m
+        return alpha, sol
+    def find_x():
+        # x = np.ones(m)  # init
+        all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
+        all_paths = [p for p in all_paths if np.min(np.diff(p)) > 0]
+
+        all_path_encoded = []
+        all_path_scores = []
+        for path in all_paths:
+            source_node = path[0]
+            x = np.zeros(m)
+            for i in range(len(path) - 1):
+                source_node = path[i]
+                target_node = path[i+1]
+                x[edges_num_dict[source_node][target_node]] = 1
+
+            alpha_star, solution_value = find_alpha(x)
+            all_path_scores.append(solution_value)
+            all_path_encoded.append(x)
+
+        x_optimal = all_path_encoded[np.argmin(all_path_scores)]
+        # exit()
+        # ranges = [[0, 1]] * m
         # t0 = time.time()
-        x_optimal = scipy.optimize.brute(count_x_realization_score, ranges=ranges, Ns=2)#, workers=-1)
+        # x_optimal = scipy.optimize.brute(count_x_realization_score, ranges=ranges, Ns=2)#, workers=-1)
         # print("optimization finished in", time.time() - t0)
         return x_optimal
 
@@ -231,11 +264,12 @@ def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
     T = c_hat.shape[0]
     m = c_hat.shape[1]
     q_hat, z = get_q_distribution_cropped(c_hat, args.d)
-
-    r_1 = count_classic_cnk_ra(T, args.alpha, args.d, m=1)  # m=1 because one r
-    r_2 = count_mardia_ra(T, args.alpha, args.d, m=1)
-    r_3 = count_agrawal_ra(T, args.alpha, args.d, m=1)
+    d = int(math.pow(args.d, m))
+    r_1 = count_classic_cnk_ra(T, args.alpha, d, m=1)  # m=1 because one r
+    r_2 = count_mardia_ra(T, args.alpha, d, m=1)
+    r_3 = count_agrawal_ra(T, args.alpha, d, m=1)
     r = min(r_1, r_2, r_3)
+    # exit()
     path_dro = find_x()
     return path_dro
 
@@ -266,7 +300,7 @@ def get_c_worst_DRO(q_hat, alpha, T):
         r_a3 = count_agrawal_ra(T[a], alpha, d, m)
         r_a = min(r_a1, r_a2, r_a3)
 
-        min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
+        min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='BFGS')
         min_value = float(min_value['fun'])
 
         # another minimization methods - just to check
@@ -328,18 +362,18 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
     # DRO on cropped data (compare with strongly optimal solution)
     min_length = min([c.shape[0] for c in c_hat])
     c_hat_cropped = [c[:min_length] for c in c_hat]
-    if args.count_cropped:
-        path_c_worst_dro_cropped = run_DRO_cropped(c_hat_cropped, min_length, edges_num_dict, g,
-                                                      start_node, finish_node, args)
-        expected_loss_dro_cropped = np.sum(path_c_worst_dro_cropped * c_bar)
-    else:
-        expected_loss_dro_cropped = 0
+    # if args.count_cropped != 'true':
+    # path_c_worst_dro_cropped = run_DRO_cropped(c_hat_cropped, min_length, edges_num_dict, g,
+    #                                               start_node, finish_node, args)
+    # expected_loss_dro_cropped = np.sum(path_c_worst_dro_cropped * c_bar)
+    # else:
+    expected_loss_dro_cropped = 0
 
     failed = {'hoef': np.mean(c_worst_hoef < c_bar), 'dro': np.mean(c_worst_dro < c_bar)}
     if verbose:
         print("Solution hoef:", expected_loss_hoeffding / nominal_expected_loss)
         print("Solution DRO:", expected_loss_dro / nominal_expected_loss)
-        if args.count_cropped:
+        if args.count_cropped != 'true':
             print("Solution DRO cropped:", expected_loss_dro_cropped / nominal_expected_loss)
     return expected_loss_hoeffding / nominal_expected_loss, expected_loss_dro / nominal_expected_loss, \
            expected_loss_dro_cropped / nominal_expected_loss, failed
@@ -348,17 +382,17 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False):
 def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
-    parser.add_argument('--h', type=int, default=2,
+    parser.add_argument('--h', type=int, default=5,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=2, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=2, help='num of different possible weights values')
+    parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=50, help='min samples num')
     parser.add_argument('--T_max', type=int, default=60, help='max samples num')
-    parser.add_argument('--count_cropped', type=str, default=True,
+    parser.add_argument('--count_cropped', type=str, default='true',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.00001, help='feasible error')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
-    parser.add_argument('--num_exps', type=int, default=10, help='number of runs with different distributions')
+    parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'multinomial', 'binomial', 'normal'])
     args = parser.parse_args()
@@ -389,8 +423,8 @@ def main():
     print("FINAL RESULT (method solution / nominal solution):")
     print("HOEFDING:", np.mean(solutions_hoef), u"\u00B1", np.std(solutions_hoef))
     print(f"DRO METHOD {args.mode}:", np.mean(solutions_dro), u"\u00B1", np.std(solutions_dro))
-    if args.count_cropped:
-        print(f"DRO CROPPED METHOD {args.mode}:", np.mean(solutions_dro_cropped), u"\u00B1", np.std(solutions_dro_cropped))
+    # if args.count_cropped != 'true':
+    print(f"DRO CROPPED METHOD {args.mode}:", np.mean(solutions_dro_cropped), u"\u00B1", np.std(solutions_dro_cropped))
     print("Failed samples:", all_failed)
 
 
