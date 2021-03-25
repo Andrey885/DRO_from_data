@@ -13,7 +13,7 @@ import plot
 def experiment(args, param_name, param):
     print(f"running experiment with {param_name}={param}")
     setattr(args, param_name, param)
-    args.T_max = args.T_min + 4*np.log(args.T_min)
+    args.T_max = int(args.T_min + 4*np.log(args.T_min))
     g = graph_utils.create_fc_graph(args.h, args.w)
     edges_num_dict = graph_utils.numerate_edges(g)
     start_node = 0
@@ -35,10 +35,11 @@ def experiment(args, param_name, param):
 
 
 def main():
-    exp_name = 'exp1'
-    title = "Hoeffding vs DRO, binomial, T_min=10"
-    x_name = "T_min"
-    params = [10 + i*5 for i in range(90//5)]
+    exp_name = 'exp6'
+    title = "Hoeffding vs DRO, normal, std"
+    # x_name = "T_min"
+    x_name = "normal_std"
+    params = [1 + i*3 for i in range(47//3)]
     args = parse_args()
     os.makedirs(f'data_{exp_name}', exist_ok=True)
     with open(f'data_{exp_name}/args.json', 'w') as f:
@@ -48,8 +49,9 @@ def main():
         json.dump(dict, f, indent=4)
     func = partial(experiment, args, x_name)
     p = Pool(11)
-    results = [func(p) for p in params]
-    # results = p.map(func, params)
+    results = p.map(func, params)
+    # results = [func(p) for p in params]
+
     mean_hoef = []
     mean_dro = []
     std_hoef = []
@@ -70,8 +72,8 @@ def main():
     np.save(f'data_{exp_name}/std_dro.npy', std_dro)
     np.save(f'data_{exp_name}/mean_dro_cropped.npy', mean_dro_cropped)
     np.save(f'data_{exp_name}/std_dro_cropped.npy', std_dro_cropped)
-    np.save(f'data_{exp_name}/params.npy', T_mins)
-    plot.main(exp_name)
+    np.save(f'data_{exp_name}/params.npy', params)
+    plot.main(exp_name, x_name, title)
 
 
 if __name__ == '__main__':

@@ -380,15 +380,15 @@ def parse_args():
     parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=2, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=50, help='min samples num')
+    parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
+    parser.add_argument('--T_min', type=int, default=30, help='min samples num')
     parser.add_argument('--T_max', type=int, default=60, help='max samples num')
     parser.add_argument('--count_cropped', type=str, default='true',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
     parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
-    parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
+    parser.add_argument('--mode', type=str, default='normal', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'multinomial', 'binomial', 'normal'])
     args = parser.parse_args()
     return args

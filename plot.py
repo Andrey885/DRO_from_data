@@ -5,14 +5,14 @@ import plotly
 import plotly.express, plotly.graph_objects, plotly.io
 
 
-def main(exp):
+def main(exp, x_name, title):
     mean_hoef = np.load(f'data_{exp}/mean_hoef.npy')
     std_hoef = np.load(f'data_{exp}/std_hoef.npy')
     mean_dro = np.load(f'data_{exp}/mean_dro.npy')
     std_dro = np.load(f'data_{exp}/std_dro.npy')
     mean_dro_cropped = np.load(f'data_{exp}/mean_dro_cropped.npy')
     std_dro_cropped = np.load(f'data_{exp}/std_dro_cropped.npy')
-    T_mins = np.load(f'data_{exp}/alphas.npy')
+    T_mins = np.load(f'data_{exp}/params.npy')
 
     x = T_mins.tolist()
     y = mean_hoef.tolist()
@@ -78,8 +78,8 @@ def main(exp):
     fig.update_layout(title=title,
                      xaxis_title=x_name,
                      yaxis_title="Expected loss")
-    fig.show()
-    plotly.io.write_image(fig, exp + ".jpg", width=1280, height=640)
+    # fig.show()
+    plotly.io.write_image(fig, f"data_{exp}/graph.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
