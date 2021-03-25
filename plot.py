@@ -78,6 +78,9 @@ def main(exp, x_name, title):
     fig.update_layout(title=title,
                      xaxis_title=x_name,
                      yaxis_title="Expected loss")
+    # y_min = 0.95
+    # y_max = np.quantile(y_upper_dro, 0.9)
+    # fig.update_yaxes(range=[y_min, y_max])
     # fig.show()
     plotly.io.write_image(fig, f"data_{exp}/graph.jpg", width=1280, height=640)
 

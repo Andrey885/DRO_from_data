@@ -5,10 +5,9 @@ import scipy.integrate
 import math
 
 
-def get_binomial_T(m, d, T_min, T_max):
+def get_binomial_T(m, d, T_min, T_max, fixed_p=None):
     # c_bar is the nominal mean of the generated data
-    _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max)
-
+    _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max, fixed_p=fixed_p)
     p = (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar)) # in fact, p = c_bar_normalized
 
     T_binomial = np.zeros(m, dtype=np.int32)
@@ -17,17 +16,20 @@ def get_binomial_T(m, d, T_min, T_max):
     return T_binomial, p
 
 
-def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=False):
-    T_binomial, p = get_binomial_T(m, d, T_min, T_max)
+def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=False,
+                                          fixed_p=None):
+    T_binomial, p = get_binomial_T(m, d, T_min, T_max, fixed_p)
     c_hat, c_bar = generate_binomial_samples(T_binomial, p, d, verbose=verbose)
     return c_hat, c_bar, T_binomial, p
 
 
-def create_multinomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
+def create_multinomial_costs(m, d=10, T_min=10, T_max=100, verbose=False, fixed_p=None):
     T = np.random.randint(T_min, T_max + 1, size=m)  # uniform
-    p = np.random.uniform(size=m)
-    p /= np.sum(p)
-
+    if fixed_p is not None:
+        p = fixed_p
+    else:
+        p = np.random.uniform(size=m)
+        p /= np.sum(p)
     complete_multinomial_data = scipy.stats.multinomial.rvs(n=d-1, p=p, size=T_max).transpose(1, 0) + 1
     c_hat = []  # incomplete data for every edge
     for a in range(m):
@@ -40,14 +42,17 @@ def create_multinomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
     return c_hat, c_bar, T, p
 
 
-def create_binomial_costs(m, d=10, T_min=10, T_max=100, verbose=False):
-    p = np.random.uniform(size=m)
+def create_binomial_costs(m, d=10, T_min=10, T_max=100, verbose=False, fixed_p=None):
+    if fixed_p is not None:
+        p = fixed_p
+    else:
+        p = np.random.uniform(size=m)
     T = np.random.randint(T_min, T_max + 1, size=m)  # uniform T
     c_hat, c_bar = generate_binomial_samples(T, p, d, verbose=verbose)
     return c_hat, c_bar, T, p
 
 
-def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
+def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False, fixed_p=None):
     def count_disrete_gaussian_distribution(mean, std):
         def gaussian(x):
             return math.exp(- ((x - mean) ** 2) / (2 * (std ** 2))) / (math.sqrt(2 * math.pi) * std)
@@ -58,16 +63,21 @@ def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
             p[i] = scipy.integrate.quad(gaussian, i+0.5, i+1.5)[0]
         p[d-1] = scipy.integrate.quad(gaussian, d-0.5, d+0.5)[0]
         p /= np.sum(p)
-        expectation = np.sum(np.linspace(1, d, d) * p)
-        return p, expectation
+        return p
 
     T, _ = get_binomial_T(m, d, T_min, T_max)  # binomial T
     # T = np.random.randint(T_min, T_max + 1, size=m)  # uniform T
     c_hat = []  # incomplete data for every arc
     c_bar = np.zeros(m)
+    full_p = [] if fixed_p is None else fixed_p
     for a in range(m):
-        mean = np.random.randint(1, d)
-        p, expectation = count_disrete_gaussian_distribution(mean, std)
+        if fixed_p is None:
+            mean = np.random.randint(1, d)
+        else:
+            mean = fixed_p[a]
+        p = count_disrete_gaussian_distribution(mean, std)
+        expectation = np.sum(np.linspace(1, d, d) * p)
+        full_p.append(mean)
         p = np.concatenate((np.array([0]), p))
         p = np.cumsum(p)
         float_uniform_0_1_values = np.random.rand(T[a])
@@ -79,7 +89,7 @@ def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
     if verbose:
         print("Generated distribution")
         print("Check mean estimation:", np.mean(c_hat[0]), c_bar[0])
-    return c_hat, c_bar, T, None
+    return c_hat, c_bar, T, full_p
 
 
 def create_normal_costs_deprecated(m, d=10, T_min=10, T_max=100, std=2, verbose=False):
