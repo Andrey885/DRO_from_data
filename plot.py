@@ -5,15 +5,14 @@ import plotly
 import plotly.express, plotly.graph_objects, plotly.io
 
 
-def main():
-    exp = 'data_exp1'
-    mean_hoef = np.load(f'{exp}/mean_hoef.npy')
-    std_hoef = np.load(f'{exp}/std_hoef.npy')
-    mean_dro = np.load(f'{exp}/mean_dro.npy')
-    std_dro = np.load(f'{exp}/std_dro.npy')
-    # mean_dro_cropped = np.load(f'{exp}/mean_dro_cropped.npy')
-    # std_dro_cropped = np.load(f'{exp}/std_dro_cropped.npy')
-    T_mins = np.load(f'{exp}/alphas.npy')
+def main(exp):
+    mean_hoef = np.load(f'data_{exp}/mean_hoef.npy')
+    std_hoef = np.load(f'data_{exp}/std_hoef.npy')
+    mean_dro = np.load(f'data_{exp}/mean_dro.npy')
+    std_dro = np.load(f'data_{exp}/std_dro.npy')
+    mean_dro_cropped = np.load(f'data_{exp}/mean_dro_cropped.npy')
+    std_dro_cropped = np.load(f'data_{exp}/std_dro_cropped.npy')
+    T_mins = np.load(f'data_{exp}/alphas.npy')
 
     x = T_mins.tolist()
     y = mean_hoef.tolist()
@@ -25,7 +24,7 @@ def main():
     y_dro_cropped = mean_dro_cropped.tolist()
     y_upper_dro_cropped = (mean_dro_cropped + std_dro_cropped).tolist()
     y_lower_dro_cropped = (mean_dro_cropped - std_dro_cropped).tolist()
-    fig = plotly.graph_objects.Figure([
+    graphs = [
         plotly.graph_objects.Scatter(
             x=x,
             y=y,
@@ -57,32 +56,34 @@ def main():
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
+        )]
+    if np.std(y_dro_cropped) != 0:
+        graphs.extend([plotly.graph_objects.Scatter(
+            x=x,
+            y=y_dro_cropped,
+            line=dict(color='rgb(100,100,0)'),
+            mode='lines',
+            name='truncated DRO'
         ),
-        #     plotly.graph_objects.Scatter(
-        #         x=x,
-        #         y=y_dro_cropped,
-        #         line=dict(color='rgb(100,100,0)'),
-        #         mode='lines',
-        #         name='truncated DRO'
-        #     ),
-        #     plotly.graph_objects.Scatter(
-        #         x=x+x[::-1], # x, then x reversed
-        #         y=y_upper_dro_cropped+y_lower_dro_cropped[::-1], # upper, then lower reversed
-        #         fill='toself',
-        #         fillcolor='rgba(100,100,0,0.1)',
-        #         line=dict(color='rgba(255,255,255,0)'),
-        #         hoverinfo="skip",
-        #         showlegend=False
-        #     )
-        ])
-        # fig.update_layout(title=r"Hoeffding vs DRO vs truncated DRO, binomial C with uniform T, T_min=50",
-        fig.update_layout(title=r"Hoeffding vs DRO, binomial, T_min=10",
-                         xaxis_title="T_min",
-                         yaxis_title="Expected loss")
-        fig.show()
-        # plotly.io.write_image(fig, exp + "_smoothed.jpg", width=1280, height=640)
-        plotly.io.write_image(fig, exp + ".jpg", width=1280, height=640)
+        plotly.graph_objects.Scatter(
+            x=x+x[::-1], # x, then x reversed
+            y=y_upper_dro_cropped+y_lower_dro_cropped[::-1], # upper, then lower reversed
+            fill='toself',
+            fillcolor='rgba(100,100,0,0.1)',
+            line=dict(color='rgba(255,255,255,0)'),
+            hoverinfo="skip",
+            showlegend=False
+        )])
+    fig = plotly.graph_objects.Figure(graphs)
+    fig.update_layout(title=title,
+                     xaxis_title=x_name,
+                     yaxis_title="Expected loss")
+    fig.show()
+    plotly.io.write_image(fig, exp + ".jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    main()
+    exp = 'data_exp1'
+    title = "Hoeffding vs DRO, binomial, T_min=10"
+    x_name = "T_min"
+    main(exp, title, x_name)
