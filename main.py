@@ -12,7 +12,6 @@ import functools
 import graph_utils
 import distribution_utils
 
-# np.random.seed(4)
 
 
 def Cnk(n, k):
@@ -83,7 +82,8 @@ def solve_cvx_dual_individual(q_hat_a, r_a):
 
 def count_classic_cnk_ra(T_a, alpha, d, m):
     # return -1 / T_a * math.log(alpha / (m * math.pow(T_a + 1, d)))
-    return -1 / T_a * math.log(alpha / (m * Cnk(T_a + d - 1, d - 1)))
+    return - (1/ T_a) * math.log(alpha / m) + (1 / T_a) * math.pow(d, m) * math.log(T_a + 1)
+    # return -1 / T_a * math.log(alpha / (m * Cnk(T_a + d - 1, d - 1)))
 
 
 def count_agrawal_ra(T_a, alpha, d, m):
@@ -157,7 +157,10 @@ def count_mardia_ra(T_a, alpha, d, m):
     k = d  # paper notation
     K_i = 1  # k_{-1}
     for i in range(k - 1):
-        square_bracket += (K_i * math.pow(math.e * math.sqrt(T_a) / (2 * math.pi), i))
+        res = K_i * math.pow(math.e * math.sqrt(T_a) / (2 * math.pi), i)
+        if res == 0:
+            break
+        square_bracket += res
         K_i *= get_cj(i)
     square_bracket *= (3 * get_cj(1) / get_cj(2))
     ra = - 1 / T_a * math.log(alpha / (m * square_bracket))
@@ -189,7 +192,7 @@ def get_q_distribution_cropped(c_hat, d):
     return q_hat, z
 
 
-def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
+def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args, all_paths):
     def F(x, alpha):
         product = 1
         z_x_product = np.dot(z, x)
@@ -236,8 +239,6 @@ def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
         return alpha, sol
     def find_x():
         # x = np.ones(m)  # init
-        all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
-        all_paths = [p for p in all_paths if np.min(np.diff(p)) > 0]
 
         all_path_encoded = []
         all_path_scores = []
@@ -260,12 +261,11 @@ def run_DRO_cropped(c_hat, T, edges_num_dict, g, start_node, finish_node, args):
     T = c_hat.shape[0]
     m = c_hat.shape[1]
     q_hat, z = get_q_distribution_cropped(c_hat, args.d)
-    print("running cropped", args.d, m)
     d = int(math.pow(args.d, m))
-    # r_1 = count_classic_cnk_ra(T, args.alpha, d, m=1)  # m=1 because one r
-    r_1 = 1e5
-    r_2 = count_mardia_ra(T, args.alpha, d, m=1)
+    r_1 = count_classic_cnk_ra(T, args.alpha, d, m=1)  # m=1 because one r
     r_3 = count_agrawal_ra(T, args.alpha, d, m=1)
+    r_2 = count_mardia_ra(T, args.alpha, d, m=1)
+
     r = min(r_1, r_2, r_3)
     path_dro = find_x()
     return path_dro
@@ -325,7 +325,7 @@ def get_q_distribution(c_hat, d):
     return q_hat
 
 
-def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False, fixed_p=None):
+def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False, fixed_p=None, all_paths=None):
     m = len(g.edges)
     if args.mode == 'binomial_with_binomial_T':
         c_hat, c_bar, T, p = distribution_utils.create_binomial_costs_with_binomial_T(m, d=args.d, T_min=args.T_min,
@@ -343,6 +343,11 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False, f
         c_hat, c_bar, T, p = distribution_utils.create_normal_costs(m, d=args.d, T_min=args.T_min,
                                                                     T_max=args.T_max, std=args.normal_std, verbose=verbose,
                                                                     fixed_p=fixed_p)
+    elif args.mode == 'binomial_with_binomial_T_reverse':
+        c_hat, c_bar, T, p = distribution_utils.create_binomial_costs_with_binomial_T_reverse(m, d=args.d, T_min=args.T_min,
+                                                                    T_max=args.T_max, verbose=verbose,
+                                                                    fixed_p=fixed_p)
+
 
     # Nominal
     nominal_expected_loss, path_c_bar = graph_utils.solve_shortest_path(c_bar.astype(float), edges_num_dict, g,
@@ -366,7 +371,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=False, f
     c_hat_cropped = [c[:min_length] for c in c_hat]
     if args.count_cropped == 'true':
         path_c_worst_dro_cropped = run_DRO_cropped(c_hat_cropped, min_length, edges_num_dict, g,
-                                                      start_node, finish_node, args)
+                                                      start_node, finish_node, args, all_paths)
         expected_loss_dro_cropped = np.sum(path_c_worst_dro_cropped * c_bar)
     else:
         expected_loss_dro_cropped = 0
@@ -387,16 +392,16 @@ def parse_args():
     parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=2, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=10, help='min samples num')
-    parser.add_argument('--T_max', type=int, default=30, help='max samples num')
-    parser.add_argument('--count_cropped', type=str, default='true',
+    parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
+    parser.add_argument('--T_min', type=int, default=5, help='min samples num')
+    parser.add_argument('--T_max', type=int, default=10, help='max samples num')
+    parser.add_argument('--count_cropped', type=str, default='false',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
     parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
-    parser.add_argument('--mode', type=str, default='binomial_with_binomial_T', help='number of runs with different distributions',
-                        choices=['binomial_with_binomial_T', 'multinomial', 'binomial', 'normal'])
+    parser.add_argument('--mode', type=str, default='normal', help='number of runs with different distributions',
+                        choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial', 'binomial', 'normal'])
     args = parser.parse_args()
     return args
 
@@ -407,16 +412,26 @@ def main():
     edges_num_dict = graph_utils.numerate_edges(g)
     start_node = 0
     finish_node = list(g.nodes)[-1]
+    all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
+    all_paths = [p for p in all_paths if np.min(np.diff(p)) > 0]
     if args.debug != '':
-        run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=True)  # test run
+        run_graph(g, edges_num_dict, args, start_node, finish_node, verbose=True, all_paths=all_paths)  # test run
         exit()
     solutions_hoef = []
     solutions_dro = []
     solutions_dro_cropped = []
     all_failed = []
-    _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node)
-    for _ in tqdm(range(args.num_exps)):
-        solution_hoef, solution_dro, solution_dro_cropped, failed, _ = run_graph(g, edges_num_dict, args, start_node, finish_node, fixed_p=fixed_p)
+    from functools import partial
+    from multiprocessing import Pool
+    f = partial(run_graph, g, edges_num_dict, args, start_node)
+    # _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node)
+    p = Pool(7)
+    res = p.map(f, [finish_node] * args.num_exps)
+    # res = [f(finish_node) for _ in range(args.num_exps)]
+    for r in res:
+        solution_hoef, solution_dro, solution_dro_cropped, failed, _ = r
+    # for _ in tqdm(range(args.num_exps)):
+    #     solution_hoef, solution_dro, solution_dro_cropped, failed, _ = run_graph(g, edges_num_dict, args, start_node, finish_node, fixed_p=fixed_p)
         solutions_hoef.append(solution_hoef)
         solutions_dro.append(solution_dro)
         solutions_dro_cropped.append(solution_dro_cropped)

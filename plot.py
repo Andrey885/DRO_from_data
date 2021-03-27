@@ -13,7 +13,18 @@ def main(exp, x_name, title):
     mean_dro_cropped = np.load(f'data_{exp}/mean_dro_cropped.npy')
     std_dro_cropped = np.load(f'data_{exp}/std_dro_cropped.npy')
     T_mins = np.load(f'data_{exp}/params.npy')
+    import matplotlib.pyplot as plt
 
+    plt.plot(T_mins, mean_hoef, label='hoefding')
+    plt.plot(T_mins, mean_dro, label='dro')
+    if np.std(mean_dro_cropped) != 0:
+        plt.plot(T_mins, mean_dro_cropped, label='dro cropped')
+    plt.legend()
+    plt.grid()
+    plt.savefig(f"data_{exp}/graph.jpg")
+    plt.show()
+    exit()
+    # plt.plot(mean_dro_cropped, label='hoefding')
     x = T_mins.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()
