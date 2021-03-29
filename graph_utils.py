@@ -6,7 +6,6 @@ import numpy as np
 def check_flow_balance_constraints(edges_num_dict, g, start_node, finish_node, x):
     for node in g.nodes:
         adj_edges = np.zeros(len(x))
-        right_part = None
         for i in edges_num_dict[node]:
             adj_edges[edges_num_dict[node][i]] = 1  # mark as 1 all outgoing arcs
         for other_node in edges_num_dict:
@@ -127,11 +126,10 @@ def create_fc_graph(h, w):
     """
     Returns a fully connected graph with h layers and w nodes at each layer
     """
-    g = networkx.Graph()
+    g = networkx.DiGraph()
     node_num = 0
 
     g.add_node(node_num)
-    last_added_layer_node = node_num
     node_num += 1
 
     # form first layer

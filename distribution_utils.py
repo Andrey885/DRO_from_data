@@ -8,7 +8,7 @@ import math
 def get_binomial_T(m, d, T_min, T_max, fixed_p=None):
     # c_bar is the nominal mean of the generated data
     _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max, fixed_p=fixed_p)
-    p = (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar)) # in fact, p = c_bar_normalized
+    p = (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))  # in fact, p = c_bar_normalized
 
     T_binomial = np.zeros(m, dtype=np.int32)
     for a in range(m):
@@ -19,15 +19,14 @@ def get_binomial_T(m, d, T_min, T_max, fixed_p=None):
 def get_binomial_T_reversed(m, d, T_min, T_max, fixed_p=None):
     # c_bar is the nominal mean of the generated data
     _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max, fixed_p=fixed_p)
-    p = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar)) # in fact, p = c_bar_normalized
+    p = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))  # in fact, p = c_bar_normalized
     T_binomial = np.zeros(m, dtype=np.int32)
     for a in range(m):
         T_binomial[a] = T_max - scipy.stats.binom.rvs(n=T_max - T_min + 1, p=p[a])
     return T_binomial, p
 
 
-def create_binomial_costs_with_binomial_T_reverse(m, d=10, T_min=10, T_max=100, verbose=False,
-                                          fixed_p=None):
+def create_binomial_costs_with_binomial_T_reverse(m, d=10, T_min=10, T_max=100, verbose=False, fixed_p=None):
     T_binomial, p = get_binomial_T_reversed(m, d, T_min, T_max, fixed_p)
     c_hat, c_bar = generate_binomial_samples(T_binomial, p, d, verbose=verbose)
     return c_hat, c_bar, T_binomial, p
