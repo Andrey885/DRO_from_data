@@ -29,7 +29,7 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
 
 
 def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, params):
-    if args.run_DRO_cropped == 'true':
+    if args.count_cropped == 'true':
         all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
     else:
         all_paths = None
@@ -67,13 +67,14 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp14'
-    x_name = "h"
+    exp_name = 'exp15'
+    x_name = "costs"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
     # params = [1 + i*3 for i in range(50//3)]
-    params = [1 + i for i in range(9)]
+    params = ['true']
+    # params = [1 + i for i in range(9)]
     # params = [1, 2]
     # params = [args.T_min + i * 3 for i in range(14)]
     print(f"Running exp with param {x_name}", params)

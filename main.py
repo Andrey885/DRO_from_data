@@ -360,6 +360,12 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
         print("Solution DRO:", expected_loss_dro / nominal_expected_loss)
         if args.count_cropped == 'true':
             print("Solution DRO cropped:", expected_loss_dro_cropped / nominal_expected_loss)
+    if args.costs == 'true':
+        argsort = np.argsort(c_bar)
+        c_worst_dro = c_worst_dro[argsort]
+        c_worst_hoef = c_worst_hoef[argsort]
+        c_bar = c_bar[argsort]
+        return c_worst_hoef, c_worst_dro, c_bar, failed, p
     return expected_loss_hoeffding / nominal_expected_loss, expected_loss_dro / nominal_expected_loss,\
            expected_loss_dro_cropped / nominal_expected_loss, failed, p
 
@@ -368,9 +374,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
-    parser.add_argument('--h', type=int, default=3,
+    parser.add_argument('--h', type=int, default=5,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=30, help='min samples num')
     parser.add_argument('--T_max', type=int, default=30, help='max samples num')
@@ -382,7 +388,10 @@ def parse_args():
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
-    parser.add_argument('--percentage_mode', type=str, default='false', help='if return result in binary (best solution or not)',
+    parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
+                                                                             ' (best solution hoef, best solution dro, equal)',
+                        choices=['true', 'false'])
+    parser.add_argument('--costs', type=str, default='true', help='collect costs',
                         choices=['true', 'false'])
     parser.add_argument('--use_best_found_path', type=str, default='true', help='if use minimal path of dro and Hoeffding',
                         choices=['true', 'false'])
@@ -406,7 +415,7 @@ def main():
     solutions_dro_cropped = []
     all_failed = []
     f = functools.partial(run_graph, g, edges_num_dict, args, start_node, finish_node)
-    if args.num_workers > 1:
+    if args.num_workers > 1 and args.num_exps > 1:
         p = Pool(args.num_workers)
         res = p.map(f, [all_paths] * args.num_exps)
     else:

@@ -16,6 +16,16 @@ def main(exp, x_name, title, args):
     std_dro_cropped = np.load(f'{exp}/std_dro_cropped.npy')
     T_mins = np.load(f'{exp}/params.npy')
 
+    y_axis = "Expected loss"
+    if args.costs == 'true':
+        T_mins = np.linspace(0, mean_hoef.shape[1] - 1, mean_hoef.shape[1]).astype(int)
+        mean_hoef = mean_hoef[0]
+        std_hoef = std_hoef[0]
+        mean_dro = mean_dro[0]
+        std_dro = std_dro[0]
+        mean_dro_cropped = mean_dro_cropped[0]
+        std_dro_cropped = std_dro_cropped[0]
+        y_axis = "Costs estimation"
     x = T_mins.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()
@@ -60,7 +70,12 @@ def main(exp, x_name, title, args):
             showlegend=False
         )]
     if np.std(y_dro_cropped) != 0:
-        third_axis_title = 'truncated DRO' if args.count_cropped == 'true' else 'equal rate'
+        if args.count_cropped == 'true':
+            third_axis_title = 'truncated DRO'
+        elif args.percentage_mode == 'true':
+            third_axis_title = 'equal rate'
+        elif args.costs == 'true':
+            third_axis_title = 'nominal costs'
         graphs.extend([plotly.graph_objects.Scatter(
             x=x,
             y=y_dro_cropped,
@@ -80,7 +95,7 @@ def main(exp, x_name, title, args):
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title=title,
                       xaxis_title=x_name,
-                      yaxis_title="Expected loss")
+                      yaxis_title=y_axis)
     # y_min = 0.95
     # y_max = np.quantile(y_upper_dro, 0.9)
     # fig.update_yaxes(range=[y_min, y_max])
@@ -89,7 +104,7 @@ def main(exp, x_name, title, args):
 
 
 if __name__ == '__main__':
-    exp = 'exp1'
+    exp = 'exp15'
     title = "Hoeffding vs DRO, binomial, T_min=10"
     x_name = "T_min"
     with open(f'{exp}/args.json', 'r') as f:
