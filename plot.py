@@ -26,6 +26,7 @@ def main(exp, x_name, title, args):
         mean_dro_cropped = mean_dro_cropped[0]
         std_dro_cropped = std_dro_cropped[0]
         y_axis = "Costs estimation"
+        x_name = "Cost number (sorted by nominal value)"
     x = T_mins.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()

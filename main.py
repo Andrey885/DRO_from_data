@@ -180,8 +180,6 @@ def run_DRO_cropped(c_hat, edges_num_dict, args, all_paths):
         return alpha, sol
 
     def find_x():
-        # x = np.ones(m)  # init
-
         all_path_encoded = []
         all_path_scores = []
         for path in all_paths:
@@ -305,9 +303,6 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
                                                           finish_node, verbose=False)
 
     expected_loss_dro = np.sum(path_c_worst_dro * c_bar)
-    if args.use_best_found_path == 'true' and expected_loss_dro > expected_loss_hoeffding:
-        path_c_worst_dro = path_c_worst_hoefding
-        expected_loss_dro = np.sum(path_c_worst_dro * c_bar)
     # DRO on cropped data (compare with strongly optimal solution)
     min_length = min([c.shape[0] for c in c_hat])
     c_hat_cropped = np.array([c[:min_length] for c in c_hat])
@@ -336,26 +331,25 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
-    parser.add_argument('--h', type=int, default=8,
+    parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=10, help='min samples num')
+    parser.add_argument('--T_min', type=int, default=30, help='min samples num')
     parser.add_argument('--T_max', type=int, default=30, help='max samples num')
     parser.add_argument('--count_cropped', type=str, default='false',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
-    parser.add_argument('--num_exps', type=int, default=11, help='number of runs with different distributions')
-    parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
+    parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
+    parser.add_argument('--m', type=str, default='5-10', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
+    parser.add_argument('--mode', type=str, default='multinomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
     parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
                                                                              ' (best solution hoef, best solution dro, equal)',
                         choices=['true', 'false'])
     parser.add_argument('--costs', type=str, default='false', help='collect costs',
-                        choices=['true', 'false'])
-    parser.add_argument('--use_best_found_path', type=str, default='false', help='if use minimal path of dro and Hoeffding',
                         choices=['true', 'false'])
     args = parser.parse_args()
     return args
@@ -380,6 +374,9 @@ def main():
     if args.num_workers > 1 and args.num_exps > 1:
         p = Pool(args.num_workers)
         res = p.map(f, [all_paths] * args.num_exps)
+        # res = []
+        # for r in tqdm(p.imap_unordered(f, [finish_node] * args.num_exps), total=args.num_exps):
+        #     res.append(r)
     else:
         res = [f(all_paths) for _ in tqdm(range(args.num_exps))]
     for r in res:
