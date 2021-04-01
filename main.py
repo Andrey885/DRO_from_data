@@ -56,28 +56,6 @@ def solve_cvx_primal_individual(q_hat_a, r_a, d):
     return prob.solution.opt_val
 
 
-def solve_cvx_dual_individual(q_hat_a, r_a):
-    """
-    This function fails as cvxpy does not recognize the problem as DCP due to numerical issues.
-    It is replaced with solve_cvx_primal.
-    """
-
-    alpha_a = cp.Variable(1)
-    d_a = np.max(np.argwhere(q_hat_a != 0)[:, 0]) + 1  # last non zero value of freq (TO CHECK?)
-
-    multiple_part = 1
-    for i in range(d_a):
-        multiple_part *= (alpha_a - (i + 1)) ** q_hat_a[i]
-    constraints = [alpha_a >= d_a]
-
-    objective_func = alpha_a - np.exp(-r_a) * multiple_part
-    objective = cp.Minimize(objective_func)
-
-    prob = cp.Problem(objective, constraints)
-    prob.solve(verbose=False)
-    return prob.solution.opt_val
-
-
 def count_classic_cnk_ra(T_a, alpha, d, m):
     # return -1 / T_a * math.log(alpha / (m * math.pow(T_a + 1, d)))
     return - (1 / T_a) * math.log(alpha / m) + (1 / T_a) * math.pow(d, m) * math.log(T_a + 1)
@@ -100,7 +78,7 @@ def count_agrawal_ra(T_a, alpha, d, m):
         if ra < (d-1) / T_a:
             return 1e5
         return abs(-ra * T_a + (d - 1) * math.log(math.e * ra * T_a / (d - 1)) - right_part)
-    min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
+    min_value = scipy.optimize.minimize(objective_function, x0=d - 1, method='Nelder-Mead')
     ra = min_value['x'][0]
     solution = min_value['fun']
     if abs(solution) > 1e-3:  # the solution has failed
@@ -134,21 +112,6 @@ def count_mardia_ra(T_a, alpha, d, m):
             result *= (2 / (j + 1))
         # assert nominator > 0 and denominator > 0, f"Value overflow processing c_{j}! Please decrease d"
         return result
-
-    def get_km(m):
-        """
-        Equality (14) of paper
-        """
-        if m == -1:
-            return 1
-        elif m % 2 == 0:
-            nomirator = math.pi * math.pow(2 * math.pi, m//2)
-            denominator = np.prod(np.arange(2, m + 1, 2))
-        else:
-            nomirator = math.pow(2 * math.pi, (m+1)//2)
-            denominator = np.prod(np.arange(1, m + 1, 2))
-        assert nomirator > 0 and denominator > 0, f"Value overflow processing k_{m}! Please decrease d"
-        return nomirator / denominator
 
     # is it OK that estimation is not strictly e^(-T_a r_a), but sqrt(T_a) * e^(-T_a r_a) ?
     square_bracket = 0  # equation (15)
@@ -191,7 +154,7 @@ def get_q_distribution_cropped(c_hat):
 
 
 def run_DRO_cropped(c_hat, edges_num_dict, args, all_paths):
-    def F(x, alpha):
+    def product(x, alpha):
         product = 1
         z_x_product = np.dot(z, x)
         for n in range(len(z)):
@@ -202,12 +165,12 @@ def run_DRO_cropped(c_hat, edges_num_dict, args, all_paths):
     def find_alpha(x):
         D = args.d * np.ones(m)
         alpha_lower_bound = np.dot(D, x)
-        F_alpha = functools.partial(F, x)
+        product_partial = functools.partial(product, x)
 
         def objective_function(alpha):
             if alpha < alpha_lower_bound:
                 return 1e5
-            product = F_alpha(alpha)
+            product = product_partial(alpha)
             return alpha - math.pow(math.e, -r) * product
         solution = scipy.optimize.minimize(objective_function, x0=alpha_lower_bound + 1, method='Nelder-Mead')
         alpha = solution['x'][0]
@@ -273,11 +236,10 @@ def get_c_worst_DRO(q_hat, alpha, T):
         r_a3 = count_agrawal_ra(T[a], alpha, d, m)
         r_a = min(r_a1, r_a2, r_a3)
 
-        min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='BFGS')
+        min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
         min_value = float(min_value['fun'])
 
         # another minimization methods - just to check
-        # min_value2 = solve_cvx_dual_individual(q_hat[a], r_a)
         # min_value2 = solve_cvx_primal_individual(q_hat[a], r_a, d)
 
         # assert abs(min_value2 - min_value) < 1e-3, (min_value2, min_value)
@@ -374,11 +336,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
-    parser.add_argument('--h', type=int, default=5,
+    parser.add_argument('--h', type=int, default=8,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=5, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=30, help='min samples num')
+    parser.add_argument('--T_min', type=int, default=10, help='min samples num')
     parser.add_argument('--T_max', type=int, default=30, help='max samples num')
     parser.add_argument('--count_cropped', type=str, default='false',
                         help='True if count cropped baseline method (computationally consuming)')
@@ -391,9 +353,9 @@ def parse_args():
     parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
                                                                              ' (best solution hoef, best solution dro, equal)',
                         choices=['true', 'false'])
-    parser.add_argument('--costs', type=str, default='true', help='collect costs',
+    parser.add_argument('--costs', type=str, default='false', help='collect costs',
                         choices=['true', 'false'])
-    parser.add_argument('--use_best_found_path', type=str, default='true', help='if use minimal path of dro and Hoeffding',
+    parser.add_argument('--use_best_found_path', type=str, default='false', help='if use minimal path of dro and Hoeffding',
                         choices=['true', 'false'])
     args = parser.parse_args()
     return args

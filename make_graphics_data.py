@@ -14,14 +14,23 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
     solutions_hoef_tmp = []
     solutions_dro_tmp = []
     solutions_dro_cropped_tmp = []
+    T_min_default = 5
+    T_max_default = 10
+    m = (T_max_default - T_min_default) / np.log(T_min_default)
     _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=all_paths)
     for param in tqdm(params):
         setattr(args, x_name, param)
         if x_name != 'T_max':
-            args.T_max = int(args.T_min + 3.106*np.log(args.T_min)) + 1
+            args.T_max = int(args.T_min + m*np.log(args.T_min)) + 1
+
+        g = graph_utils.create_fc_graph(args.h, args.w)
+        edges_num_dict = graph_utils.numerate_edges(g)
+        finish_node = max(g.nodes)
+        all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)] # debug
+
         solution_hoef, solution_dro, solution_dro_cropped, failed, _ = run_graph(g, edges_num_dict, args, start_node,
-                                                                                 finish_node, fixed_p=fixed_p,
-                                                                                 all_paths=all_paths)
+                                                                                 finish_node, fixed_p=None,
+                                                                                 all_paths=all_paths) # debug
         solutions_hoef_tmp.append(solution_hoef)
         solutions_dro_tmp.append(solution_dro)
         solutions_dro_cropped_tmp.append(solution_dro_cropped)
@@ -67,16 +76,16 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp15'
-    x_name = "costs"
+    exp_name = 'exp10'
+    x_name = "h"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
     # params = [1 + i*3 for i in range(50//3)]
-    params = ['true']
-    # params = [1 + i for i in range(9)]
+    # params = ['true']
+    params = [3 + i for i in range(4)]
     # params = [1, 2]
-    # params = [args.T_min + i * 3 for i in range(14)]
+    # params = [10 + i * 5 for i in range(9)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()
