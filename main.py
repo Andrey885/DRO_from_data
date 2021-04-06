@@ -242,7 +242,7 @@ def get_c_worst_DRO(q_hat, alpha, T):
             r_a = min(r_a1, r_a2, r_a3)
         except OverflowError:
             # print("Overflow encountered in radius processing. Falling to Mardia radius")
-            r_a = count_mardia_ra(T[a], alpha, d, m)
+            r_a = count_mardia_ra(T[a], alpha, d, m_modified)
         min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
         min_value = float(min_value['fun'])
 
@@ -344,18 +344,18 @@ def parse_args():
     parser.add_argument('--w', type=int, default=6, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=5, help='min samples num')
-    parser.add_argument('--T_max', type=int, default=30, help='max samples num')
-    parser.add_argument('--count_cropped', type=str, default='False',
+    parser.add_argument('--T_max', type=int, default=10, help='max samples num')
+    parser.add_argument('--count_cropped', type=str, default='false',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
-    # parser.add_argument('--seed', type=int, default=42, help='seed')
+    parser.add_argument('--seed', type=int, default=42, help='seed')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
     parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
-    parser.add_argument('--m', type=str, default='5-10', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
+    parser.add_argument('--m', type=str, default='5-15', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
-    parser.add_argument('--percentage_mode', type=str, default='true', help='if true returns result in format'
+    parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
                                                                              ' (best solution hoef, best solution dro, equal)',
                         choices=['true', 'false'])
     parser.add_argument('--costs', type=str, default='false', help='collect costs',

@@ -23,12 +23,14 @@ def main(exp, x_name, title, args):
         solutions_eq_perc = np.zeros_like(solutions_dro)
         # result_array = np.stack((solutions_hoef, solutions_dro), axis=0)
         solutions_eq_perc[solutions_hoef == solutions_dro] = 1
-        solutions_dro_perc[solutions_hoef < solutions_dro] = 1
-        solutions_hoef_perc[solutions_hoef > solutions_dro] = 1
+        solutions_dro_perc[solutions_hoef > solutions_dro] = 1
+        solutions_hoef_perc[solutions_hoef < solutions_dro] = 1
         # result_array[result_array == np.min(result_array, axis=0)] = 1
         # result_array[result_array != np.min(result_array, axis=0)] = 0
         # result_array[:, solutions_hoef == solutions_dro] = 0
         # solutions_hoef, solutions_dro = result_array
+        solutions_hoef = solutions_hoef_perc
+        solutions_dro = solutions_dro_perc
         solutions_dro_cropped = solutions_eq_perc
     else:
         std_c_worst_dro = np.mean(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)

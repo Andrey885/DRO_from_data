@@ -84,24 +84,23 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp10'
+    exp_name = 'exp9'
     x_name = "T_max"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
     # params = [1 + i*3 for i in range(50//3)]
     # params = ['true']
-    params = [10 + i*5 for i in range(18)]
+    # params = [10 + i*5 for i in range(18)]
     # params = [10]
     # params = [1, 2]
-    # params = [10 + i for i in range(25)]
+    params = [10 + i for i in range(25)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()
     run_dro_truncated_title = ' vs DRO_truncated' if args.count_cropped == 'true' else ''
     title = f"Hoeffding vs DRO{run_dro_truncated_title}, {args.mode}, {x_name}"
     os.makedirs(exp_name, exist_ok=True)
-    os.makedirs(f'{exp_name}_weights', exist_ok=True)
 
     with open(f'{exp_name}/args.json', 'w') as f:
         dict = args.__dict__

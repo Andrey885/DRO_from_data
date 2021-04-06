@@ -5,44 +5,31 @@ import scipy.integrate
 import math
 
 
-def get_binomial_T(m, d, T_min, T_max, fixed_p=None):
-    # c_bar is the nominal mean of the generated data
-    _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max, fixed_p=fixed_p)
-    p = (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))  # in fact, p = c_bar_normalized
-
-    T_binomial = np.zeros(m, dtype=np.int32)
-    for a in range(m):
-        T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p[a])
-    return T_binomial, p
-
-
-def get_binomial_T_reverse(m, d, T_min, T_max, fixed_p=None):
-    # c_bar is the nominal mean of the generated data
-    _, c_bar, _, _ = create_binomial_costs(m, d, T_min, T_max, fixed_p=fixed_p)
-    p = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))  # in fact, p = c_bar_normalized
-    T_binomial = np.zeros(m, dtype=np.int32)
-    for a in range(m):
-        T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p[a])
-    return T_binomial, p
-
-
 def create_binomial_costs_with_binomial_T_reverse(m, d=10, T_min=10, T_max=100, verbose=False, fixed_p=None):
-    T_binomial, _ = get_binomial_T_reverse(m, d, T_min, T_max, fixed_p)
     if fixed_p is not None:
         p = fixed_p
     else:
         p = np.random.uniform(size=m)
+    c_bar = (d - 1)*p + 1  # nominal mean
+    p_T = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))
+    T_binomial = np.zeros(m, dtype=np.int32)
+    for a in range(m):
+        T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p_T[a])
     c_hat, c_bar = generate_binomial_samples(T_binomial, p, d, verbose=verbose)
     return c_hat, c_bar, T_binomial, p
 
 
 def create_binomial_costs_with_binomial_T(m, d=10, T_min=10, T_max=100, verbose=False,
                                           fixed_p=None):
-    T_binomial, _ = get_binomial_T(m, d, T_min, T_max, fixed_p)
     if fixed_p is not None:
         p = fixed_p
     else:
         p = np.random.uniform(size=m)
+    c_bar = (d - 1)*p + 1  # nominal mean
+    p_T = (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))
+    T_binomial = np.zeros(m, dtype=np.int32)
+    for a in range(m):
+        T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p_T[a])
     c_hat, c_bar = generate_binomial_samples(T_binomial, p, d, verbose=verbose)
     return c_hat, c_bar, T_binomial, p
 
