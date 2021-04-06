@@ -80,29 +80,18 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     c_worst_dro = np.array(c_worst_dro)
     c_worst_hoef = np.array(c_worst_hoef)
     c_bar = np.array(c_bar)
-    if args.percentage_mode == 'true':
-        solutions_hoef_perc = np.zeros_like(solutions_hoef)
-        solutions_dro_perc = np.zeros_like(solutions_dro)
-        solutions_eq_perc = np.zeros_like(solutions_dro)
-        result_array = np.stack((solutions_hoef, solutions_dro), axis=0)
-        solutions_eq_perc[solutions_hoef == solutions_dro] = 1
-        result_array[result_array == np.min(result_array, axis=0)] = 1
-        result_array[result_array != np.min(result_array, axis=0)] = 0
-        result_array[:, solutions_hoef == solutions_dro] = 0
-        solutions_hoef, solutions_dro = result_array
-        solutions_dro_cropped = solutions_eq_perc
     return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar
 
 
 def main():
-    exp_name = 'exp11'
+    exp_name = 'exp10'
     x_name = "T_max"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
     # params = [1 + i*3 for i in range(50//3)]
     # params = ['true']
-    params = [15 + i*5 for i in range(18)]
+    params = [10 + i*5 for i in range(18)]
     # params = [10]
     # params = [1, 2]
     # params = [10 + i for i in range(25)]
@@ -127,44 +116,25 @@ def main():
     solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar = run_experiments(args, g, edges_num_dict, start_node,
                                                                            finish_node, x_name, params)
 
-    mean_hoef = np.mean(solutions_hoef, axis=0)
-    mean_dro = np.mean(solutions_dro, axis=0)
-    mean_dro_cropped = np.mean(solutions_dro_cropped, axis=0)
-    mean_c_worst_dro = np.mean(c_worst_dro, axis=0)
-    mean_c_worst_hoef = np.mean(c_worst_hoef, axis=0)
-    mean_c_bar = np.mean(c_bar, axis=0)
-    if args.percentage_mode == 'true':
-        std_dro = std_dro_cropped = std_hoef = np.zeros(len(mean_dro))
-    else:
-        std_c_worst_dro = np.mean(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
-        std_c_worst_hoef = np.mean(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
-        std_c_bar = np.mean(np.abs(c_bar - np.median(c_bar)), axis=0)
-        std_dro = np.mean(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
-        std_dro_cropped = np.mean(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
-        std_hoef = np.mean(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
+    print(f"Finished exp, {x_name}")
+    np.save(f'{exp_name}/c_worst_dro.npy', c_worst_dro)
+    np.save(f'{exp_name}/c_worst_hoef.npy', c_worst_hoef)
+    np.save(f'{exp_name}/c_bar.npy', c_bar)
 
-    print(f"Finished exp, {x_name}", mean_hoef)
-    np.save(f'{exp_name}/mean_hoef.npy', mean_hoef)
-    np.save(f'{exp_name}/std_hoef.npy', std_hoef)
-    np.save(f'{exp_name}/mean_dro.npy', mean_dro)
-
-    np.save(f'{exp_name}_weights/mean_c_worst_hoef.npy', mean_c_worst_hoef)
-    np.save(f'{exp_name}_weights/mean_c_worst_dro.npy', mean_c_worst_dro)
-    np.save(f'{exp_name}_weights/mean_c_worst_dro_cropped.npy', mean_c_bar)
-
-
-    np.save(f'{exp_name}/std_dro.npy', std_dro)
-    np.save(f'{exp_name}/mean_dro_cropped.npy', mean_dro_cropped)
-    np.save(f'{exp_name}/std_dro_cropped.npy', std_dro_cropped)
+    np.save(f'{exp_name}/solutions_hoef.npy', solutions_hoef)
+    np.save(f'{exp_name}/solutions_dro.npy', solutions_dro)
+    np.save(f'{exp_name}/solutions_dro_cropped.npy', solutions_dro_cropped)
     np.save(f'{exp_name}/params.npy', params)
-
+    count_costs = args.costs == 'true'
+    count_percentage = args.percentage_mode == 'true'
+    args.cost = args.percentage_mode = 'false'
     plot.main(exp_name, x_name, title, args)
-    np.save(f'{exp_name}_weights/std_c_worst_hoef.npy', std_c_worst_hoef)
-    np.save(f'{exp_name}_weights/std_c_worst_dro.npy', std_c_worst_dro)
-    np.save(f'{exp_name}_weights/std_c_worst_dro_cropped.npy', std_c_bar)
-    np.save(f'{exp_name}_weights/params.npy', params)
-    args.costs = 'true'
-    plot.main(exp_name + '_weights', x_name, title.replace(x_name, "costs"), args)
+    if count_costs:
+        args.costs = 'true'
+        plot.main(exp_name, x_name, title.replace(x_name, "costs"), args)
+    if count_percentage:
+        args.percentage_mode = 'true'
+        plot.main(exp_name, x_name, title + ' percentage', args)
 
 
 if __name__ == '__main__':

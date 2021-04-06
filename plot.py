@@ -9,21 +9,44 @@ import plotly.express, plotly.graph_objects, plotly.io
 
 
 def main(exp, x_name, title, args):
-    c_worst_string = '_c_worst' if args.costs == 'true' else ''
-    mean_hoef = np.load(f'{exp}/mean{c_worst_string}_hoef.npy')
-    std_hoef = np.load(f'{exp}/std{c_worst_string}_hoef.npy')
-    mean_dro = np.load(f'{exp}/mean{c_worst_string}_dro.npy')
-    std_dro = np.load(f'{exp}/std{c_worst_string}_dro.npy')
-    T_mins = np.load(f'{exp}/params.npy')
-    if os.path.exists(f'{exp}/mean{c_worst_string}_dro_cropped.npy'):
-        mean_dro_cropped = np.load(f'{exp}/mean{c_worst_string}_dro_cropped.npy')
-        std_dro_cropped = np.load(f'{exp}/std{c_worst_string}_dro_cropped.npy')
+    solutions_hoef = np.load(f'{exp}/solutions_hoef.npy')
+    solutions_dro = np.load(f'{exp}/solutions_dro.npy')
+    solutions_dro_cropped = np.load(f'{exp}/solutions_dro_cropped.npy')
+    c_bar = np.load(f'{exp}/c_bar.npy')
+    c_worst_dro = np.load(f'{exp}/c_worst_dro.npy')
+    c_worst_hoef = np.load(f'{exp}/c_worst_hoef.npy')
+    params = np.load(f'{exp}/params.npy')
+    if args.percentage_mode == 'true':
+        std_dro = std_dro_cropped = std_hoef = np.zeros(len(params))
+        solutions_hoef_perc = np.zeros_like(solutions_hoef)
+        solutions_dro_perc = np.zeros_like(solutions_dro)
+        solutions_eq_perc = np.zeros_like(solutions_dro)
+        # result_array = np.stack((solutions_hoef, solutions_dro), axis=0)
+        solutions_eq_perc[solutions_hoef == solutions_dro] = 1
+        solutions_dro_perc[solutions_hoef < solutions_dro] = 1
+        solutions_hoef_perc[solutions_hoef > solutions_dro] = 1
+        # result_array[result_array == np.min(result_array, axis=0)] = 1
+        # result_array[result_array != np.min(result_array, axis=0)] = 0
+        # result_array[:, solutions_hoef == solutions_dro] = 0
+        # solutions_hoef, solutions_dro = result_array
+        solutions_dro_cropped = solutions_eq_perc
     else:
-        mean_dro_cropped = std_dro_cropped = np.zeros(len(T_mins))
+        std_c_worst_dro = np.mean(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
+        std_c_worst_hoef = np.mean(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
+        std_c_bar = np.mean(np.abs(c_bar - np.median(c_bar)), axis=0)
+        std_dro = np.mean(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
+        std_dro_cropped = np.mean(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
+        std_hoef = np.mean(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
+    mean_hoef = np.mean(solutions_hoef, axis=0)
+    mean_dro = np.mean(solutions_dro, axis=0)
+    mean_dro_cropped = np.mean(solutions_dro_cropped, axis=0)
+    mean_c_worst_dro = np.mean(c_worst_dro, axis=0)
+    mean_c_worst_hoef = np.mean(c_worst_hoef, axis=0)
+    mean_c_bar = np.mean(c_bar, axis=0)
 
     y_axis = "Expected loss"
     if args.costs == 'true':
-        T_mins = np.linspace(0, mean_hoef.shape[1] - 1, mean_hoef.shape[1]).astype(int)
+        params = np.linspace(0, mean_hoef.shape[1] - 1, mean_hoef.shape[1]).astype(int)
         mean_hoef = mean_hoef[0]
         std_hoef = std_hoef[0]
         mean_dro = mean_dro[0]
@@ -34,7 +57,7 @@ def main(exp, x_name, title, args):
         x_name = "Cost number (sorted by nominal value)"
     if args.percentage_mode == 'true':
         y_axis = "Outperforming rate"
-    x = T_mins.tolist()
+    x = params.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()
     y_lower = (mean_hoef - std_hoef).tolist()
@@ -104,15 +127,11 @@ def main(exp, x_name, title, args):
     fig.update_layout(title=title,
                       xaxis_title=x_name,
                       yaxis_title=y_axis)
-    # y_min = 0.95
-    # y_max = np.quantile(y_upper_dro, 0.9)
-    # fig.update_yaxes(range=[y_min, y_max])
-    # fig.show()
-    plotly.io.write_image(fig, f"{exp}/graph.jpg", width=1280, height=640)
+    plotly.io.write_image(fig, f"{exp}/graph_{title}.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    exp = 'exp15'
+    exp = 'exp10'
     title = "Hoeffding vs DRO, binomial, T_min=10"
     x_name = "T_min"
     with open(f'{exp}/args.json', 'r') as f:

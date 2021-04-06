@@ -339,9 +339,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
-    parser.add_argument('--h', type=int, default=3,
+    parser.add_argument('--h', type=int, default=6,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=9, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--w', type=int, default=6, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=5, help='min samples num')
     parser.add_argument('--T_max', type=int, default=30, help='max samples num')
@@ -355,7 +355,7 @@ def parse_args():
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
-    parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
+    parser.add_argument('--percentage_mode', type=str, default='true', help='if true returns result in format'
                                                                              ' (best solution hoef, best solution dro, equal)',
                         choices=['true', 'false'])
     parser.add_argument('--costs', type=str, default='false', help='collect costs',
