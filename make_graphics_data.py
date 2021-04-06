@@ -84,12 +84,12 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp9'
-    x_name = "T_max"
+    exp_name = 'exp1'
+    x_name = "T_min"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
-    # params = [1 + i*3 for i in range(50//3)]
+    # params = [10 + i*3 for i in range(50//3)]
     # params = ['true']
     # params = [10 + i*5 for i in range(18)]
     # params = [10]
@@ -126,14 +126,11 @@ def main():
     np.save(f'{exp_name}/params.npy', params)
     count_costs = args.costs == 'true'
     count_percentage = args.percentage_mode == 'true'
-    args.cost = args.percentage_mode = 'false'
     plot.main(exp_name, x_name, title, args)
     if count_costs:
-        args.costs = 'true'
-        plot.main(exp_name, x_name, title.replace(x_name, "costs"), args)
+        plot.main(exp_name, x_name, title.replace(x_name, "costs"), args, count_costs=count_costs)
     if count_percentage:
-        args.percentage_mode = 'true'
-        plot.main(exp_name, x_name, title + ' percentage', args)
+        plot.main(exp_name, x_name, title + ' percentage', args, count_percentage=count_percentage)
 
 
 if __name__ == '__main__':
