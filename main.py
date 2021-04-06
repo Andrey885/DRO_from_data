@@ -23,9 +23,10 @@ def get_c_worst_hoefding(c_hat, T, m, d, alpha=0.05):
     Get estimation of worst weights c with threshold alpha using Hoefding inequality (CHECKED)
     """
     c_worst = []
+    sum = np.sum(1/T)
     for a in range(m):
         empirical_mean = np.mean(c_hat[a])
-        epsilon = (d-1) * math.sqrt(- math.log(alpha/m) / (2 * T[a]))
+        epsilon = (d-1) * math.sqrt(- math.log(alpha/(T[a] * sum)) / (2 * T[a]))
         c_worst.append(min(empirical_mean + epsilon, d))
     c_worst = np.array(c_worst)
     return c_worst
@@ -200,10 +201,14 @@ def run_DRO_cropped(c_hat, edges_num_dict, args, all_paths):
     m = c_hat.shape[1]
     q_hat, z = get_q_distribution_cropped(c_hat)
     d = int(math.pow(args.d, m))
-    r_1 = count_classic_cnk_ra(T, args.alpha, d, m=1)  # m=1 because one r
-    r_3 = count_agrawal_ra(T, args.alpha, d, m=1)
-    r_2 = count_mardia_ra(T, args.alpha, d, m=1)
-    r = min(r_1, r_2, r_3)
+    try:
+        r_1 = count_classic_cnk_ra(T, args.alpha, d, m=1)  # m=1 because one r
+        r_3 = count_agrawal_ra(T, args.alpha, d, m=1)
+        r_2 = count_mardia_ra(T, args.alpha, d, m=1)
+        r = min(r_1, r_2, r_3)
+    except OverflowError:
+        # print("Value overflow! Rolling back to mardia radiuses")
+        r = count_mardia_ra(T, args.alpha, d, m=1)
     path_dro = find_x()
     return path_dro
 
@@ -226,14 +231,18 @@ def get_c_worst_DRO(q_hat, alpha, T):
 
     d = q_hat.shape[1]
     m = len(q_hat)
-
+    sum = np.sum(1/T)
     c_worst = []
     for a in range(m):
-        r_a1 = count_classic_cnk_ra(T[a], alpha, d, m)
-        r_a2 = count_mardia_ra(T[a], alpha, d, m)
-        r_a3 = count_agrawal_ra(T[a], alpha, d, m)
-        r_a = min(r_a1, r_a2, r_a3)
-
+        m_modified = T[a] * sum
+        try:
+            r_a1 = count_classic_cnk_ra(T[a], alpha, d, m_modified)
+            r_a2 = count_mardia_ra(T[a], alpha, d, m_modified)
+            r_a3 = count_agrawal_ra(T[a], alpha, d, m_modified)
+            r_a = min(r_a1, r_a2, r_a3)
+        except OverflowError:
+            # print("Overflow encountered in radius processing. Falling to Mardia radius")
+            r_a = count_mardia_ra(T[a], alpha, d, m)
         min_value = scipy.optimize.minimize(objective_function, x0=d + 1, method='Nelder-Mead')
         min_value = float(min_value['fun'])
 
@@ -317,14 +326,13 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
         print("Solution DRO:", expected_loss_dro / nominal_expected_loss)
         if args.count_cropped == 'true':
             print("Solution DRO cropped:", expected_loss_dro_cropped / nominal_expected_loss)
-    if args.costs == 'true':
-        argsort = np.argsort(c_bar)
-        c_worst_dro = c_worst_dro[argsort]
-        c_worst_hoef = c_worst_hoef[argsort]
-        c_bar = c_bar[argsort]
-        return c_worst_hoef, c_worst_dro, c_bar, failed, p
+
+    argsort = np.argsort(c_bar)
+    c_worst_dro = c_worst_dro[argsort]
+    c_worst_hoef = c_worst_hoef[argsort]
+    c_bar = c_bar[argsort]
     return expected_loss_hoeffding / nominal_expected_loss, expected_loss_dro / nominal_expected_loss,\
-           expected_loss_dro_cropped / nominal_expected_loss, failed, p
+           expected_loss_dro_cropped / nominal_expected_loss, c_worst_dro, c_worst_hoef, c_bar, failed, p
 
 
 def parse_args():
@@ -333,17 +341,18 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
     parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
-    parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--w', type=int, default=9, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=30, help='min samples num')
+    parser.add_argument('--T_min', type=int, default=5, help='min samples num')
     parser.add_argument('--T_max', type=int, default=30, help='max samples num')
-    parser.add_argument('--count_cropped', type=str, default='false',
+    parser.add_argument('--count_cropped', type=str, default='False',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
+    # parser.add_argument('--seed', type=int, default=42, help='seed')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
     parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
     parser.add_argument('--m', type=str, default='5-10', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
-    parser.add_argument('--mode', type=str, default='multinomial', help='number of runs with different distributions',
+    parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
     parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
@@ -352,6 +361,7 @@ def parse_args():
     parser.add_argument('--costs', type=str, default='false', help='collect costs',
                         choices=['true', 'false'])
     args = parser.parse_args()
+    # np.random.seed(args.seed)
     return args
 
 
@@ -380,7 +390,7 @@ def main():
     else:
         res = [f(all_paths) for _ in tqdm(range(args.num_exps))]
     for r in res:
-        solution_hoef, solution_dro, solution_dro_cropped, failed, _ = r
+        solution_hoef, solution_dro, solution_dro_cropped, _, _, _, failed, _ = r
         solutions_hoef.append(solution_hoef)
         solutions_dro.append(solution_dro)
         solutions_dro_cropped.append(solution_dro_cropped)

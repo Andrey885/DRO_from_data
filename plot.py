@@ -2,19 +2,24 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+import os
 from argparse import Namespace
 import plotly
 import plotly.express, plotly.graph_objects, plotly.io
 
 
 def main(exp, x_name, title, args):
-    mean_hoef = np.load(f'{exp}/mean_hoef.npy')
-    std_hoef = np.load(f'{exp}/std_hoef.npy')
-    mean_dro = np.load(f'{exp}/mean_dro.npy')
-    std_dro = np.load(f'{exp}/std_dro.npy')
-    mean_dro_cropped = np.load(f'{exp}/mean_dro_cropped.npy')
-    std_dro_cropped = np.load(f'{exp}/std_dro_cropped.npy')
+    c_worst_string = '_c_worst' if args.costs == 'true' else ''
+    mean_hoef = np.load(f'{exp}/mean{c_worst_string}_hoef.npy')
+    std_hoef = np.load(f'{exp}/std{c_worst_string}_hoef.npy')
+    mean_dro = np.load(f'{exp}/mean{c_worst_string}_dro.npy')
+    std_dro = np.load(f'{exp}/std{c_worst_string}_dro.npy')
     T_mins = np.load(f'{exp}/params.npy')
+    if os.path.exists(f'{exp}/mean{c_worst_string}_dro_cropped.npy'):
+        mean_dro_cropped = np.load(f'{exp}/mean{c_worst_string}_dro_cropped.npy')
+        std_dro_cropped = np.load(f'{exp}/std{c_worst_string}_dro_cropped.npy')
+    else:
+        mean_dro_cropped = std_dro_cropped = np.zeros(len(T_mins))
 
     y_axis = "Expected loss"
     if args.costs == 'true':
@@ -27,6 +32,8 @@ def main(exp, x_name, title, args):
         std_dro_cropped = std_dro_cropped[0]
         y_axis = "Costs estimation"
         x_name = "Cost number (sorted by nominal value)"
+    if args.percentage_mode == 'true':
+        y_axis = "Outperforming rate"
     x = T_mins.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()

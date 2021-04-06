@@ -14,13 +14,16 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
     solutions_hoef_tmp = []
     solutions_dro_tmp = []
     solutions_dro_cropped_tmp = []
+    c_worst_dro_tmp = []
+    c_worst_hoef_tmp = []
+    c_bar_tmp = []
     T_min_default = int(args.m.split('-')[0])
     T_max_default = int(args.m.split('-')[1])
     m = (T_max_default - T_min_default) / np.log(T_min_default)
     if x_name != 'T_max':
         args.T_max = int(args.T_min + m*np.log(args.T_min)) + 1
-    _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=all_paths)
-    fixed_p = None
+    _, _, _, _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=all_paths)
+    # fixed_p = None
     for param in params:
         setattr(args, x_name, param)
         if x_name != 'T_max':
@@ -30,13 +33,16 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
         finish_node = max(g.nodes)
         all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
 
-        solution_hoef, solution_dro, solution_dro_cropped, failed, _ = run_graph(g, edges_num_dict, args, start_node,
+        solution_hoef, solution_dro, solution_dro_cropped, c_worst_dro, c_worst_hoef, c_bar, failed, _ = run_graph(g, edges_num_dict, args, start_node,
                                                                                  finish_node, fixed_p=None,
                                                                                  all_paths=all_paths)
         solutions_hoef_tmp.append(solution_hoef)
         solutions_dro_tmp.append(solution_dro)
         solutions_dro_cropped_tmp.append(solution_dro_cropped)
-    return solutions_hoef_tmp, solutions_dro_tmp, solutions_dro_cropped_tmp
+        c_worst_dro_tmp.append(c_worst_dro)
+        c_worst_hoef_tmp.append(c_worst_hoef)
+        c_bar_tmp.append(c_bar)
+    return solutions_hoef_tmp, solutions_dro_tmp, solutions_dro_cropped_tmp, c_worst_dro_tmp, c_worst_hoef_tmp, c_bar_tmp
 
 
 def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, params):
@@ -48,6 +54,9 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     solutions_hoef = []
     solutions_dro = []
     solutions_dro_cropped = []
+    c_worst_dro = []
+    c_worst_hoef = []
+    c_bar = []
     # all_failed = []
     experiment_func = partial(run_one_exp, g, edges_num_dict, args, start_node, all_paths, x_name, params)
     if args.num_workers > 1:
@@ -58,13 +67,19 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     else:
         results = [experiment_func(finish_node) for _ in range(args.num_exps)]
     for res in results:
-        solutions_hoef_tmp, solutions_dro_tmp, solutions_dro_cropped_tmp = res
+        solutions_hoef_tmp, solutions_dro_tmp, solutions_dro_cropped_tmp, c_worst_dro_tmp, c_worst_hoef_tmp, c_bar_tmp = res
         solutions_hoef.append(solutions_hoef_tmp)
         solutions_dro.append(solutions_dro_tmp)
         solutions_dro_cropped.append(solutions_dro_cropped_tmp)
+        c_worst_dro.append(c_worst_dro_tmp)
+        c_worst_hoef.append(c_worst_hoef_tmp)
+        c_bar.append(c_bar_tmp)
     solutions_hoef = np.array(solutions_hoef)
     solutions_dro = np.array(solutions_dro)
     solutions_dro_cropped = np.array(solutions_dro_cropped)
+    c_worst_dro = np.array(c_worst_dro)
+    c_worst_hoef = np.array(c_worst_hoef)
+    c_bar = np.array(c_bar)
     if args.percentage_mode == 'true':
         solutions_hoef_perc = np.zeros_like(solutions_hoef)
         solutions_dro_perc = np.zeros_like(solutions_dro)
@@ -76,27 +91,29 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
         result_array[:, solutions_hoef == solutions_dro] = 0
         solutions_hoef, solutions_dro = result_array
         solutions_dro_cropped = solutions_eq_perc
-    return solutions_hoef, solutions_dro, solutions_dro_cropped
+    return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar
 
 
 def main():
-    exp_name = 'exp8'
-    x_name = "normal_std"
+    exp_name = 'exp11'
+    x_name = "T_max"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
     # params = [1 + i*3 for i in range(50//3)]
     # params = ['true']
-    # params = [5 + i for i in range(25)]
+    params = [15 + i*5 for i in range(18)]
     # params = [10]
     # params = [1, 2]
-    params = [5 + i * 5 for i in range(18)]
+    # params = [10 + i for i in range(25)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()
     run_dro_truncated_title = ' vs DRO_truncated' if args.count_cropped == 'true' else ''
-    title = f"Hoeffding vs DRO{run_dro_truncated_title}, {args.mode}, {x_name if args.costs != 'true' else 'costs'}"
+    title = f"Hoeffding vs DRO{run_dro_truncated_title}, {args.mode}, {x_name}"
     os.makedirs(exp_name, exist_ok=True)
+    os.makedirs(f'{exp_name}_weights', exist_ok=True)
+
     with open(f'{exp_name}/args.json', 'w') as f:
         dict = args.__dict__
         dict["changed_parameter"] = x_name
@@ -107,15 +124,21 @@ def main():
     start_node = 0
     finish_node = list(g.nodes)[-1]
 
-    solutions_hoef, solutions_dro, solutions_dro_cropped = run_experiments(args, g, edges_num_dict, start_node,
+    solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar = run_experiments(args, g, edges_num_dict, start_node,
                                                                            finish_node, x_name, params)
 
     mean_hoef = np.mean(solutions_hoef, axis=0)
     mean_dro = np.mean(solutions_dro, axis=0)
     mean_dro_cropped = np.mean(solutions_dro_cropped, axis=0)
+    mean_c_worst_dro = np.mean(c_worst_dro, axis=0)
+    mean_c_worst_hoef = np.mean(c_worst_hoef, axis=0)
+    mean_c_bar = np.mean(c_bar, axis=0)
     if args.percentage_mode == 'true':
         std_dro = std_dro_cropped = std_hoef = np.zeros(len(mean_dro))
     else:
+        std_c_worst_dro = np.mean(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
+        std_c_worst_hoef = np.mean(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
+        std_c_bar = np.mean(np.abs(c_bar - np.median(c_bar)), axis=0)
         std_dro = np.mean(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
         std_dro_cropped = np.mean(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
         std_hoef = np.mean(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
@@ -124,11 +147,24 @@ def main():
     np.save(f'{exp_name}/mean_hoef.npy', mean_hoef)
     np.save(f'{exp_name}/std_hoef.npy', std_hoef)
     np.save(f'{exp_name}/mean_dro.npy', mean_dro)
+
+    np.save(f'{exp_name}_weights/mean_c_worst_hoef.npy', mean_c_worst_hoef)
+    np.save(f'{exp_name}_weights/mean_c_worst_dro.npy', mean_c_worst_dro)
+    np.save(f'{exp_name}_weights/mean_c_worst_dro_cropped.npy', mean_c_bar)
+
+
     np.save(f'{exp_name}/std_dro.npy', std_dro)
     np.save(f'{exp_name}/mean_dro_cropped.npy', mean_dro_cropped)
     np.save(f'{exp_name}/std_dro_cropped.npy', std_dro_cropped)
     np.save(f'{exp_name}/params.npy', params)
+
     plot.main(exp_name, x_name, title, args)
+    np.save(f'{exp_name}_weights/std_c_worst_hoef.npy', std_c_worst_hoef)
+    np.save(f'{exp_name}_weights/std_c_worst_dro.npy', std_c_worst_dro)
+    np.save(f'{exp_name}_weights/std_c_worst_dro_cropped.npy', std_c_bar)
+    np.save(f'{exp_name}_weights/params.npy', params)
+    args.costs = 'true'
+    plot.main(exp_name + '_weights', x_name, title.replace(x_name, "costs"), args)
 
 
 if __name__ == '__main__':
