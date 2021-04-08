@@ -35,9 +35,12 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         std_dro_cropped = np.mean(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
         std_hoef = np.mean(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
     if count_costs:
-        solutions_hoef = c_worst_hoef.reshape(c_worst_hoef.shape[0]* c_worst_hoef.shape[1], -1)
-        solutions_dro = c_worst_dro.reshape(c_worst_hoef.shape[0]* c_worst_hoef.shape[1], -1)
-        solutions_dro_cropped = c_bar.reshape(c_worst_hoef.shape[0]* c_worst_hoef.shape[1], -1)
+        solutions_hoef = c_worst_hoef[:, 0, :]
+        solutions_dro = c_worst_dro[:, 0, :]
+        solutions_dro_cropped = c_bar[:, 0, :]
+        # solutions_hoef = c_worst_hoef.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
+        # solutions_dro = c_worst_dro.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
+        # solutions_dro_cropped = c_bar.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
         std_dro = std_dro_cropped = std_hoef = np.zeros(solutions_dro_cropped.shape[1])
     mean_hoef = np.mean(solutions_hoef, axis=0)
     mean_dro = np.mean(solutions_dro, axis=0)
@@ -67,10 +70,19 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             x=x,
             y=y,
             line=dict(color='rgb(0,100,80)'),
-            mode='lines',
+            mode=args.plot_mode,
             name='Hoeffding'
         ),
         plotly.graph_objects.Scatter(
+            x=x,
+            y=y_dro,
+            line=dict(color='rgb(100,0,80)'),
+            mode=args.plot_mode,
+            name='DRO'
+        )
+        ]
+    if np.max(std_dro) != 0:
+        graphs.extend([plotly.graph_objects.Scatter(
             x=x+x[::-1],  # x, then x reversed
             y=y_upper+y_lower[::-1],  # upper, then lower reversed
             fill='toself',
@@ -80,13 +92,6 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             showlegend=False
         ),
         plotly.graph_objects.Scatter(
-            x=x,
-            y=y_dro,
-            line=dict(color='rgb(100,0,80)'),
-            mode='lines',
-            name='DRO'
-        ),
-        plotly.graph_objects.Scatter(
             x=x+x[::-1],  # x, then x reversed
             y=y_upper_dro+y_lower_dro[::-1],  # upper, then lower reversed
             fill='toself',
@@ -94,30 +99,31 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
-        )]
+        )])
     if np.std(y_dro_cropped) != 0:
-        if args.count_cropped == 'true':
-            third_axis_title = 'truncated DRO'
-        elif count_percentage:
+        if count_percentage:
             third_axis_title = 'equal rate'
         elif count_costs:
             third_axis_title = 'nominal costs'
+        elif args.count_cropped == 'true':
+            third_axis_title = 'truncated DRO'
         graphs.extend([plotly.graph_objects.Scatter(
             x=x,
             y=y_dro_cropped,
             line=dict(color='rgb(100,100,0)'),
-            mode='lines',
+            mode=args.plot_mode,
             name=third_axis_title
-        ),
-        plotly.graph_objects.Scatter(
-            x=x+x[::-1],  # x, then x reversed
-            y=y_upper_dro_cropped+y_lower_dro_cropped[::-1],  # upper, then lower reversed
-            fill='toself',
-            fillcolor='rgba(100,100,0,0.1)',
-            line=dict(color='rgba(255,255,255,0)'),
-            hoverinfo="skip",
-            showlegend=False
         )])
+        if np.max(std_dro) != 0:
+            graphs.append(plotly.graph_objects.Scatter(
+                x=x+x[::-1],  # x, then x reversed
+                y=y_upper_dro_cropped+y_lower_dro_cropped[::-1],  # upper, then lower reversed
+                fill='toself',
+                fillcolor='rgba(100,100,0,0.1)',
+                line=dict(color='rgba(255,255,255,0)'),
+                hoverinfo="skip",
+                showlegend=False
+            ))
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title=title,
                       xaxis_title=x_name,
@@ -126,10 +132,11 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp1'
+    exp = 'exp10'
     title = "Hoeffding vs DRO, binomial, T_min=10"
     x_name = "T_min"
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
-    main(exp, title, x_name, args)
+    args.costs = 'true'
+    main(exp, title, x_name, args, count_costs=True)

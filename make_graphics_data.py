@@ -84,8 +84,8 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp1'
-    x_name = "T_min"
+    exp_name = 'exp10'
+    x_name = "T_max"
     # x_name = "d"
     # x_name = "normal_std"
     args = parse_args()
@@ -94,7 +94,7 @@ def main():
     # params = [10 + i*5 for i in range(18)]
     # params = [10]
     # params = [1, 2]
-    params = [10 + i for i in range(25)]
+    params = [10 + i*3 for i in range(14)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()

@@ -342,23 +342,25 @@ def parse_args():
     parser.add_argument('--h', type=int, default=3,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
-    parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
+    parser.add_argument('--d', type=int, default=2, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=5, help='min samples num')
     parser.add_argument('--T_max', type=int, default=10, help='max samples num')
-    parser.add_argument('--count_cropped', type=str, default='false',
+    parser.add_argument('--count_cropped', type=str, default='true',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
     parser.add_argument('--seed', type=int, default=42, help='seed')
     parser.add_argument('--normal_std', type=int, default=5, help='std for normal data distribution')
     parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
-    parser.add_argument('--m', type=str, default='5-15', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
+    parser.add_argument('--m', type=str, default='5-10', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
     parser.add_argument('--mode', type=str, default='binomial', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal'])
-    parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
+    parser.add_argument('--percentage_mode', type=str, default='true', help='if true returns result in format'
                                                                              ' (best solution hoef, best solution dro, equal)',
                         choices=['true', 'false'])
-    parser.add_argument('--costs', type=str, default='true', help='collect costs',
+    parser.add_argument('--plot_mode', type=str, default='markers', help='plot lines or markers',
+                        choices=['lines', 'markers'])
+    parser.add_argument('--costs', type=str, default='false', help='collect costs',
                         choices=['true', 'false'])
     args = parser.parse_args()
     # np.random.seed(args.seed)
