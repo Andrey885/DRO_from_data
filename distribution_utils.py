@@ -10,7 +10,7 @@ def create_binomial_costs_with_binomial_T_reverse(m, d=10, T_min=10, T_max=100, 
         p = fixed_p
     else:
         p = np.random.uniform(size=m)
-    c_bar = (d - 1)*p + 1  # nominal mean
+    c_bar = (d - 1) * p + 1  # nominal mean
     p_T = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))
     T_binomial = np.zeros(m, dtype=np.int32)
     for a in range(m):
@@ -62,6 +62,52 @@ def create_binomial_costs(m, d=10, T_min=10, T_max=100, verbose=False, fixed_p=N
     c_hat, c_bar = generate_binomial_samples(T, p, d, verbose=verbose)
     return c_hat, c_bar, T, p
 
+
+def create_normal_costs_reverse(m, d, T_min, T_max, std, verbose=False, fixed_p=None):
+    def count_disrete_gaussian_distribution(mean, std):
+        def gaussian(x):
+            return math.exp(- ((x - mean) ** 2) / (2 * (std ** 2))) / (math.sqrt(2 * math.pi) * std)
+
+        p = np.zeros(d)
+        p[0] = scipy.integrate.quad(gaussian, 0.5, 1.5)[0]
+        for i in range(1, d - 1):
+            p[i] = scipy.integrate.quad(gaussian, i+0.5, i+1.5)[0]
+        p[d-1] = scipy.integrate.quad(gaussian, d-0.5, d+0.5)[0]
+        p /= np.sum(p)
+        return p
+
+    c_bar = np.zeros(m)
+    p_full = np.zeros((m, d))
+    fixed_p_accumulative = [] if fixed_p is None else fixed_p
+    for a in range(m):
+        if fixed_p is None:
+            mean = np.random.randint(1, d)
+            fixed_p_accumulative.append(mean)
+        else:
+            mean = fixed_p[a]
+        p_full[a] = count_disrete_gaussian_distribution(mean, std)
+        expectation = np.sum(np.linspace(1, d, d) * p_full[a])
+        c_bar[a] = expectation
+
+    p_T = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))
+    T_binomial = np.zeros(m, dtype=np.int32)
+    for a in range(m):
+        T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p_T[a])
+
+    c_hat = []  # incomplete data for every arc
+    for a in range(m):
+        p = p_full[a]
+        p = np.concatenate((np.array([0]), p))
+        p = np.cumsum(p)
+        float_uniform_0_1_values = np.random.rand(T_binomial[a])
+        integer_normal_values = np.zeros(T_binomial[a])
+        for i in range(1, d+1):
+            integer_normal_values[(float_uniform_0_1_values > p[i-1]) & (float_uniform_0_1_values <= p[i])] = i
+        c_hat.append(integer_normal_values)
+    if verbose:
+        print("Generated distribution")
+        print("Check mean estimation:", np.mean(c_hat[0]), c_bar[0])
+    return c_hat, c_bar, T_binomial, fixed_p_accumulative
 
 def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False, fixed_p=None):
     def count_disrete_gaussian_distribution(mean, std):
