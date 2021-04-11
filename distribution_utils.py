@@ -81,19 +81,17 @@ def create_normal_costs_reverse(m, d, T_min, T_max, std, verbose=False, fixed_p=
     fixed_p_accumulative = [] if fixed_p is None else fixed_p
     for a in range(m):
         if fixed_p is None:
-            mean = np.random.randint(1, d)
+            mean = np.random.randint(1, d+1)
             fixed_p_accumulative.append(mean)
         else:
             mean = fixed_p[a]
         p_full[a] = count_disrete_gaussian_distribution(mean, std)
         expectation = np.sum(np.linspace(1, d, d) * p_full[a])
         c_bar[a] = expectation
-
     p_T = 1 - (c_bar - np.min(c_bar)) / (np.max(c_bar) - np.min(c_bar))
     T_binomial = np.zeros(m, dtype=np.int32)
     for a in range(m):
         T_binomial[a] = T_min + scipy.stats.binom.rvs(n=T_max - T_min, p=p_T[a])
-
     c_hat = []  # incomplete data for every arc
     for a in range(m):
         p = p_full[a]
@@ -129,7 +127,7 @@ def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False, fixe
     full_p = [] if fixed_p is None else fixed_p
     for a in range(m):
         if fixed_p is None:
-            mean = np.random.randint(1, d)
+            mean = np.random.randint(1, d+1)
         else:
             mean = fixed_p[a]
         p = count_disrete_gaussian_distribution(mean, std)
