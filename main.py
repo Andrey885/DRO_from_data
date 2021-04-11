@@ -59,7 +59,7 @@ def solve_cvx_primal_individual(q_hat_a, r_a, d):
 
 def count_classic_cnk_ra(T_a, alpha, d, m):
     # return -1 / T_a * math.log(alpha / (m * math.pow(T_a + 1, d)))
-    return - (1 / T_a) * math.log(alpha / m) + (1 / T_a) * math.pow(d, m) * math.log(T_a + 1)
+    return - (1 / T_a) * math.log(alpha / m) + (1 / T_a) * d * math.log(T_a + 1)
     # return -1 / T_a * math.log(alpha / (m * Cnk(T_a + d - 1, d - 1)))
 
 
