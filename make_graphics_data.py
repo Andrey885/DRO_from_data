@@ -17,17 +17,14 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
     c_worst_dro_tmp = []
     c_worst_hoef_tmp = []
     c_bar_tmp = []
-    T_min_default = int(args.m.split('-')[0])
-    T_max_default = int(args.m.split('-')[1])
-    m = (T_max_default - T_min_default) / np.log(T_min_default)
     if x_name != 'T_max':
-        args.T_max = int(args.T_min + m*np.log(args.T_min)) + 1
+        args.T_max = int(args.T_min + args.delta)
     _, _, _, _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=all_paths)
     # fixed_p = None
     for param in params:
         setattr(args, x_name, param)
         if x_name != 'T_max':
-            args.T_max = int(args.T_min + m*np.log(args.T_min)) + 1
+            args.T_max = int(args.T_min + args.delta)
         g = graph_utils.create_fc_graph(args.h, args.w)
         edges_num_dict = graph_utils.numerate_edges(g)
         finish_node = max(g.nodes)
@@ -80,21 +77,14 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     c_worst_dro = np.array(c_worst_dro)
     c_worst_hoef = np.array(c_worst_hoef)
     c_bar = np.array(c_bar)
-    return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar
+    return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_hoef, c_worst_dro, c_bar
 
 
 def main():
-    exp_name = 'exp10'
+    exp_name = 'exp8b'
     x_name = "T_max"
-    # x_name = "d"
-    # x_name = "normal_std"
     args = parse_args()
-    # params = [10 + i*3 for i in range(50//3)]
-    # params = ['true']
-    # params = [10 + i*5 for i in range(18)]
-    # params = [10]
-    # params = [1, 2]
-    params = [10 + i*3 for i in range(14)]
+    params = [5 + i*2 for i in range(21)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()
@@ -112,7 +102,7 @@ def main():
     start_node = 0
     finish_node = list(g.nodes)[-1]
 
-    solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_hoef, c_bar = run_experiments(args, g, edges_num_dict, start_node,
+    solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_hoef, c_worst_dro, c_bar = run_experiments(args, g, edges_num_dict, start_node,
                                                                            finish_node, x_name, params)
 
     print(f"Finished exp, {x_name}")

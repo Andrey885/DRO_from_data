@@ -312,7 +312,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
         # Hoeffding
         c_worst_hoef = get_c_worst_hoefding(c_hat, T, m, d=args.d, alpha=args.alpha)
     else:
-        # run DRO cropped 2 as Hoeffding
+        # run DRO cropped 2 passed as Hoeffding
         q_hat = get_q_distribution(c_hat_cropped, args.d)
         c_worst_hoef = get_c_worst_DRO(q_hat, args.alpha, T_cropped)
     _, path_c_worst_hoefding = graph_utils.solve_shortest_path(c_worst_hoef.astype(float), edges_num_dict, g,
@@ -323,7 +323,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
         q_hat = get_q_distribution(c_hat, args.d)
         c_worst_dro = get_c_worst_DRO(q_hat, args.alpha, T)
     else:
-        # run hoeffding as DRO
+        # run hoeffding passed as DRO
         c_worst_dro = get_c_worst_hoefding(c_hat_cropped, T_cropped, m, d=args.d, alpha=args.alpha)
     _, path_c_worst_dro = graph_utils.solve_shortest_path(c_worst_dro.astype(float), edges_num_dict, g, start_node,
                                                           finish_node, verbose=False)
@@ -360,18 +360,18 @@ def parse_args():
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
-    parser.add_argument('--T_min', type=int, default=10, help='min samples num')
-    parser.add_argument('--T_max', type=int, default=17, help='max samples num')
+    parser.add_argument('--T_min', type=int, default=5, help='min samples num')
+    parser.add_argument('--T_max', type=int, default=35, help='max samples num')
     parser.add_argument('--count_cropped', type=str, default='true',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--count_cropped2', type=str, default='DRO',
                         help='True if count cropped DRO or Hoeffding', choices=['DRO', 'Hoeffding', 'None'])
     parser.add_argument('--alpha', type=int, default=0.05, help='feasible error')
     parser.add_argument('--seed', type=int, default=42, help='seed')
-    parser.add_argument('--normal_std', type=int, default=50/4, help='std for normal data distribution')
-    parser.add_argument('--num_exps', type=int, default=100, help='number of runs with different distributions')
-    parser.add_argument('--m', type=str, default='5-10', help='Pair {T_min}-{T_max} to choose ln proportionality coefficient')
-    parser.add_argument('--mode', type=str, default='normal_reverse', help='number of runs with different distributions',
+    parser.add_argument('--normal_std', type=int, default=50/2, help='std for normal data distribution')
+    parser.add_argument('--num_exps', type=int, default=200, help='number of runs with different distributions')
+    parser.add_argument('--delta', type=int, default=10, help='choose T_max as in T_max = T_min + delta')
+    parser.add_argument('--mode', type=str, default='binomial_with_binomial_T_reverse', help='number of runs with different distributions',
                         choices=['binomial_with_binomial_T', 'binomial_with_binomial_T_reverse', 'multinomial',
                                  'binomial', 'normal', 'normal_reverse'])
     parser.add_argument('--percentage_mode', type=str, default='false', help='if true returns result in format'
