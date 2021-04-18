@@ -28,23 +28,25 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         solutions_dro = solutions_dro_perc
         solutions_dro_cropped = solutions_eq_perc
     else:
-        std_c_worst_dro = np.mean(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
-        std_c_worst_hoef = np.mean(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
-        std_c_bar = np.mean(np.abs(c_bar - np.median(c_bar)), axis=0)
-        std_dro = np.mean(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
-        std_dro_cropped = np.mean(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
-        std_hoef = np.mean(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
+        std_c_worst_dro = np.median(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
+        std_c_worst_hoef = np.median(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
+        std_c_bar = np.median(np.abs(c_bar - np.median(c_bar)), axis=0)
+        std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
+        std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
+        std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
     if count_costs:
         solutions_hoef = c_worst_hoef[:, 0, :]
         solutions_dro = c_worst_dro[:, 0, :]
         solutions_dro_cropped = c_bar[:, 0, :]
-        # solutions_hoef = c_worst_hoef.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
-        # solutions_dro = c_worst_dro.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
-        # solutions_dro_cropped = c_bar.reshape(c_worst_hoef.shape[0] * c_worst_hoef.shape[1], -1)
+        # std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef, axis=0)), axis=0)
+        # std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro, axis=0)), axis=0)
+        # std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped, axis=0)), axis=0)
+        # std_dro_cropped = np.zeros(len(std_hoef))
         std_dro = std_dro_cropped = std_hoef = np.zeros(solutions_dro_cropped.shape[1])
     mean_hoef = np.mean(solutions_hoef, axis=0)
     mean_dro = np.mean(solutions_dro, axis=0)
     mean_dro_cropped = np.mean(solutions_dro_cropped, axis=0)
+
     mean_c_worst_dro = np.mean(c_worst_dro, axis=0)
     mean_c_worst_hoef = np.mean(c_worst_hoef, axis=0)
     mean_c_bar = np.mean(c_bar, axis=0)
@@ -55,6 +57,16 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         x_name = "Cost number (sorted by nominal value)"
     if count_percentage == 'true':
         y_axis = "Outperforming rate"
+
+    if args.count_cropped2 == 'DRO':
+        data_passed_as_hoeffding_name = 'DRO truncated 2'
+        data_passed_as_dro_name = 'DRO'
+    elif args.count_cropped2 == 'Hoeffding':
+        data_passed_as_hoeffding_name = 'Hoeffding'
+        data_passed_as_dro_name = 'Hoeffding truncated'
+    else:
+        data_passed_as_hoeffding_name = 'Hoeffding'
+        data_passed_as_dro_name = 'DRO'
     x = params.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()
@@ -71,14 +83,14 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             y=y,
             line=dict(color='rgb(0,100,80)'),
             mode=args.plot_mode,
-            name='Hoeffding'
+            name=data_passed_as_hoeffding_name
         ),
         plotly.graph_objects.Scatter(
             x=x,
             y=y_dro,
             line=dict(color='rgb(100,0,80)'),
             mode=args.plot_mode,
-            name='DRO'
+            name=data_passed_as_dro_name
         )
         ]
     if np.max(std_dro) != 0:
@@ -132,9 +144,9 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp10'
+    exp = 'exp7'
     title = "Hoeffding vs DRO, binomial, T_min=10"
-    x_name = "T_min"
+    x_name = "T_max"
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
