@@ -52,7 +52,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
     mean_c_bar = np.mean(c_bar, axis=0)
     y_axis = "Expected loss"
     if count_costs:
-        params = np.linspace(0, c_worst_dro.shape[1] - 1, c_worst_dro.shape[1]).astype(int)
+        params = np.linspace(0, c_worst_dro.shape[-1] - 1, c_worst_dro.shape[-1]).astype(int)
         y_axis = "Costs estimation"
         x_name = "Cost number (sorted by nominal value)"
     if count_percentage == 'true':
@@ -81,14 +81,14 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         plotly.graph_objects.Scatter(
             x=x,
             y=y,
-            line=dict(color='rgb(0,100,80)'),
+            line=dict(color='rgb(250,0,0)'),
             mode=args.plot_mode,
             name=data_passed_as_hoeffding_name
         ),
         plotly.graph_objects.Scatter(
             x=x,
             y=y_dro,
-            line=dict(color='rgb(100,0,80)'),
+            line=dict(color='rgb(0,250,0)'),
             mode=args.plot_mode,
             name=data_passed_as_dro_name
         )
@@ -98,7 +98,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             x=x+x[::-1],  # x, then x reversed
             y=y_upper+y_lower[::-1],  # upper, then lower reversed
             fill='toself',
-            fillcolor='rgba(0,100,80,0.1)',
+            fillcolor='rgba(100,0,0,0.1)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
@@ -107,7 +107,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             x=x+x[::-1],  # x, then x reversed
             y=y_upper_dro+y_lower_dro[::-1],  # upper, then lower reversed
             fill='toself',
-            fillcolor='rgba(100,0,80,0.1)',
+            fillcolor='rgba(0,100,0,0.1)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
@@ -122,7 +122,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         graphs.extend([plotly.graph_objects.Scatter(
             x=x,
             y=y_dro_cropped,
-            line=dict(color='rgb(100,100,0)'),
+            line=dict(color='rgb(0,0,250)'),
             mode=args.plot_mode,
             name=third_axis_title
         )])
@@ -131,7 +131,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
                 x=x+x[::-1],  # x, then x reversed
                 y=y_upper_dro_cropped+y_lower_dro_cropped[::-1],  # upper, then lower reversed
                 fill='toself',
-                fillcolor='rgba(100,100,0,0.1)',
+                fillcolor='rgba(0,0,100,0.1)',
                 line=dict(color='rgba(255,255,255,0)'),
                 hoverinfo="skip",
                 showlegend=False
@@ -144,9 +144,9 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp7'
+    exp = 'exp2a'
     title = "Hoeffding vs DRO, binomial, T_min=10"
-    x_name = "T_max"
+    x_name = "T_min"
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
