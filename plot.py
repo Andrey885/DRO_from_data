@@ -28,16 +28,16 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         solutions_dro = solutions_dro_perc
         solutions_dro_cropped = solutions_eq_perc
     else:
-        std_c_worst_dro = np.median(np.abs(c_worst_dro - np.median(c_worst_dro)), axis=0)
-        std_c_worst_hoef = np.median(np.abs(c_worst_hoef - np.median(c_worst_hoef)), axis=0)
-        std_c_bar = np.median(np.abs(c_bar - np.median(c_bar)), axis=0)
-        std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro)), axis=0)
-        std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped)), axis=0)
-        std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef)), axis=0)
+        std_c_worst_dro = np.median(np.abs(c_worst_dro - np.mean(c_worst_dro)), axis=0)
+        std_c_worst_hoef = np.median(np.abs(c_worst_hoef - np.mean(c_worst_hoef)), axis=0)
+        std_c_bar = np.median(np.abs(c_bar - np.mean(c_bar)), axis=0)
+        std_dro = np.median(np.abs(solutions_dro - np.mean(solutions_dro)), axis=0)
+        std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.mean(solutions_dro_cropped)), axis=0)
+        std_hoef = np.median(np.abs(solutions_hoef - np.mean(solutions_hoef)), axis=0)
     if count_costs:
-        solutions_hoef = c_worst_hoef[:, 0, :]
-        solutions_dro = c_worst_dro[:, 0, :]
-        solutions_dro_cropped = c_bar[:, 0, :]
+        solutions_hoef = c_worst_hoef[:, -3, :]
+        solutions_dro = c_worst_dro[:, -3, :]
+        solutions_dro_cropped = c_bar[:, -3, :]
         # std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef, axis=0)), axis=0)
         # std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro, axis=0)), axis=0)
         # std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped, axis=0)), axis=0)
@@ -50,11 +50,11 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
     mean_c_worst_dro = np.mean(c_worst_dro, axis=0)
     mean_c_worst_hoef = np.mean(c_worst_hoef, axis=0)
     mean_c_bar = np.mean(c_bar, axis=0)
-    y_axis = "Expected loss"
+    y_axis = "Nominal relative loss"
     if count_costs:
         params = np.linspace(0, c_worst_dro.shape[-1] - 1, c_worst_dro.shape[-1]).astype(int)
         y_axis = "Costs estimation"
-        x_name = "Cost number (sorted by nominal value)"
+        x_name = "arc index (in the sorted array)"
     if count_percentage == 'true':
         y_axis = "Outperforming rate"
 
@@ -137,15 +137,15 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
                 showlegend=False
             ))
     fig = plotly.graph_objects.Figure(graphs)
-    fig.update_layout(title=title,
+    fig.update_layout(title='',
                       xaxis_title=x_name,
                       yaxis_title=y_axis)
     plotly.io.write_image(fig, f"{exp}/graph_{title}.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    exp = 'exp2a'
-    title = "Hoeffding vs DRO, binomial, T_min=10"
+    exp = 'exp1b'
+    title = "Hoeffding vs DRO, binomial, T_min=30"
     x_name = "T_min"
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)

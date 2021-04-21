@@ -1,30 +1,76 @@
 import numpy as np
+import networkx
+import plotly
+import os
+import json
+
+import main
+import graph_utils
 
 
-def main():
-    exp = 'exp6'
-    c_bar = np.load(f'{exp}/c_bar.npy')
-    c_worst_dro = np.load(f'{exp}/c_worst_dro.npy')
-    c_worst_dro2 = np.load(f'{exp}/c_worst_hoef.npy')
-    c_worst_dro2 = c_worst_dro2[:, -1]
-    c_worst_dro = c_worst_dro[:, -1]
-    c_bar = c_bar[:, -1]
-    errors_dro = np.zeros(len(c_worst_dro))
-    errors_dro2 = np.zeros(len(c_worst_dro))
-    for exp in range(c_worst_dro2.shape[0]):
-        c_bar_exp = c_bar[exp]
-        c_worst_dro2_exp = c_worst_dro2[exp]
-        c_worst_dro_exp = c_worst_dro[exp]
-        num_edges = c_worst_dro_exp.shape[0]
-        for i in range(num_edges):
-            for j in range(num_edges):
-                if c_bar_exp[i] < c_bar_exp[j] and c_worst_dro2_exp[i] > c_worst_dro2_exp[j]:
-                    errors_dro2[exp] += 1
-                if c_bar_exp[i] < c_bar_exp[j] and c_worst_dro_exp[i] > c_worst_dro_exp[j]:
-                    errors_dro[exp] += 1
+def run():
+    exp = 'exp7'
+    os.makedirs(exp, exist_ok=True)
+    args = main.parse_args()
+    args.delta = 13
+    args.T_min = 5
+    args.count_cropped = 'true'
+    args.count_cropped2 = 'DRO'
+    g = graph_utils.create_fc_graph(args.h, args.w)
+    edges_num_dict = graph_utils.numerate_edges(g)
+    start_node = 0
+    finish_node = list(g.nodes)[-1]
+    all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
+    solutions_dro2 = solutions_dro = 0
+    while solutions_dro2 >= solutions_dro:
+        solutions_dro2, solutions_dro, solutions_dro_cropped, c_worst_dro, c_worst_dro2, c_bar, _, _ = main.run_graph(g, edges_num_dict,
+                                                                                                            args, start_node,
+                                                                                                            finish_node, all_paths=all_paths)
+    params = np.linspace(0, c_worst_dro.shape[-1] - 1, c_worst_dro.shape[-1]).astype(int)
+    y_axis = "Costs estimation"
+    x_name = "arc index (in the sorted array)"
+    x = params.tolist()
+    graphs = [
+        plotly.graph_objects.Scatter(
+            x=x,
+            y=c_worst_dro2.tolist(),
+            line=dict(color='rgb(250,0,0)'),
+            mode=args.plot_mode,
+            name='DRO truncated 2'
+        ),
+        plotly.graph_objects.Scatter(
+            x=x,
+            y=c_worst_dro.tolist(),
+            line=dict(color='rgb(0,250,0)'),
+            mode=args.plot_mode,
+            name='DRO'
+        ),
+        plotly.graph_objects.Scatter(
+            x=x,
+            y=c_bar.tolist(),
+            line=dict(color='rgb(0,0,250)'),
+            mode=args.plot_mode,
+            name='nominal costs'
+        )]
+    fig = plotly.graph_objects.Figure(graphs)
+    fig.update_layout(title='',
+                      xaxis_title=x_name,
+                      yaxis_title=y_axis)
+    plotly.io.write_image(fig, f"{exp}/graph.jpg", width=1280, height=640)
 
-    print("Number of errors DRO:", np.mean(errors_dro), np.std(errors_dro))
-    print("Number of errors DRO2:", np.mean(errors_dro2), np.std(errors_dro2))
+    num_edges = c_bar.shape[0]
+    errors_dro2 = errors_dro = 0
+    for i in range(num_edges):
+        for j in range(num_edges):
+            if c_bar[i] < c_bar[j] and c_worst_dro2[i] > c_worst_dro2[j]:
+                errors_dro2 += 1
+            if c_bar[i] < c_bar[j] and c_worst_dro[i] > c_worst_dro[j]:
+                errors_dro += 1
+
+    print("Number of errors DRO:", errors_dro)
+    print("Number of errors DRO2:", errors_dro2)
+    with open(exp + "/errors_count.json", 'w') as f:
+        json.dump({"errors_num_DRO": errors_dro, "errors_num_DRO_2": errors_dro2}, f)
 
 if __name__ == '__main__':
-    main()
+    run()
