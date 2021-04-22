@@ -59,14 +59,14 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         y_axis = "Outperforming rate"
 
     if args.count_cropped2 == 'DRO':
-        data_passed_as_hoeffding_name = 'DRO truncated 2'
-        data_passed_as_dro_name = 'DRO'
+        data_passed_as_hoeffding_name = 'truncated DRO 2'
+        data_passed_as_dro_name = 'baseline DRO'
     elif args.count_cropped2 == 'Hoeffding':
-        data_passed_as_hoeffding_name = 'Hoeffding'
-        data_passed_as_dro_name = 'Hoeffding truncated'
+        data_passed_as_hoeffding_name = 'Hoeffding bounds'
+        data_passed_as_dro_name = 'Hoeffding bounds truncated'
     else:
-        data_passed_as_hoeffding_name = 'Hoeffding'
-        data_passed_as_dro_name = 'DRO'
+        data_passed_as_hoeffding_name = 'Hoeffding bounds'
+        data_passed_as_dro_name = 'baseline DRO'
     x = params.tolist()
     y = mean_hoef.tolist()
     y_upper = (mean_hoef + std_hoef).tolist()
@@ -144,11 +144,11 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp1b'
-    title = "Hoeffding vs DRO, binomial, T_min=30"
-    x_name = "T_min"
+    exp = 'exp8b'
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
-    args.costs = 'true'
-    main(exp, title, x_name, args, count_costs=True)
+    args.costs = 'false'
+    title = "loss" if args.costs == 'false' else 'costs'
+    x_name = "delta"
+    main(exp, x_name, title, args, count_costs = args.costs == 'true')

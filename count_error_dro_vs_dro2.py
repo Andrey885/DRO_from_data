@@ -36,14 +36,14 @@ def run():
             y=c_worst_dro2.tolist(),
             line=dict(color='rgb(250,0,0)'),
             mode=args.plot_mode,
-            name='DRO truncated 2'
+            name='truncated DRO 2'
         ),
         plotly.graph_objects.Scatter(
             x=x,
             y=c_worst_dro.tolist(),
             line=dict(color='rgb(0,250,0)'),
             mode=args.plot_mode,
-            name='DRO'
+            name='baseline DRO'
         ),
         plotly.graph_objects.Scatter(
             x=x,
