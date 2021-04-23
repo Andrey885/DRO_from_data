@@ -60,11 +60,13 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
     if args.count_cropped2 == 'DRO':
         data_passed_as_hoeffding_name = 'truncated DRO 2'
+        passed_as_hoeffding_dict = dict(color='rgb(0,87,31)', dash='dash')
         data_passed_as_dro_name = 'baseline DRO'
     elif args.count_cropped2 == 'Hoeffding':
         data_passed_as_hoeffding_name = 'Hoeffding bounds'
         data_passed_as_dro_name = 'Hoeffding bounds truncated'
     else:
+        passed_as_hoeffding_dict = dict(color='rgb(250,0,0)')
         data_passed_as_hoeffding_name = 'Hoeffding bounds'
         data_passed_as_dro_name = 'baseline DRO'
     x = params.tolist()
@@ -81,7 +83,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         plotly.graph_objects.Scatter(
             x=x,
             y=y,
-            line=dict(color='rgb(250,0,0)'),
+            line=passed_as_hoeffding_dict,
             mode=args.plot_mode,
             name=data_passed_as_hoeffding_name
         ),
@@ -134,7 +136,8 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
                 fillcolor='rgba(0,0,100,0.1)',
                 line=dict(color='rgba(255,255,255,0)'),
                 hoverinfo="skip",
-                showlegend=False
+                showlegend=False,
+
             ))
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
@@ -145,11 +148,11 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp7'
+    exp = 'exp6'
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
     args.costs = 'false'
     title = "loss" if args.costs == 'false' else 'costs'
-    x_name = "T_min"
+    x_name = args.changed_parameter
     main(exp, x_name, title, args, count_costs = args.costs == 'true')

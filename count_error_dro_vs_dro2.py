@@ -14,6 +14,7 @@ def run():
     args = main.parse_args()
     args.normal_std = 50/4
     args.mode = 'normal'
+    args.w = agrs.h = 3
     args.delta = 20
     args.T_min = 10
     args.count_cropped = 'true'
@@ -36,28 +37,30 @@ def run():
         plotly.graph_objects.Scatter(
             x=x,
             y=c_worst_dro2.tolist(),
-            line=dict(color='rgb(250,0,0)'),
+            line=dict(color='rgb(0,87,31)', dash='dash'),
             mode=args.plot_mode,
             name='truncated DRO 2'
         ),
         plotly.graph_objects.Scatter(
             x=x,
             y=c_worst_dro.tolist(),
-            line=dict(color='rgb(0,250,0)'),
+            line=dict(color='rgb(0,87,31)'),
             mode=args.plot_mode,
             name='baseline DRO'
         ),
         plotly.graph_objects.Scatter(
             x=x,
             y=c_bar.tolist(),
-            line=dict(color='rgb(0,0,250)'),
+            line=dict(color='rgb(0,0,0)'),
             mode=args.plot_mode,
             name='nominal costs'
         )]
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
                       xaxis_title=x_name,
-                      yaxis_title=y_axis)
+                      yaxis_title=y_axis,
+                      plot_bgcolor='rgba(200,200,200,0)')
+
     plotly.io.write_image(fig, f"{exp}/graph.jpg", width=1280, height=640)
 
     num_edges = c_bar.shape[0]
