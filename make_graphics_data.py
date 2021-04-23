@@ -31,7 +31,7 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
         all_paths = [x for x in networkx.all_simple_paths(g, start_node, finish_node)]
 
         solution_hoef, solution_dro, solution_dro_cropped, c_worst_dro, c_worst_hoef, c_bar, failed, _ = run_graph(g, edges_num_dict, args, start_node,
-                                                                                 finish_node, fixed_p=None,
+                                                                                 finish_node, fixed_p=fixed_p,
                                                                                  all_paths=all_paths)
         solutions_hoef_tmp.append(solution_hoef)
         solutions_dro_tmp.append(solution_dro)
@@ -81,10 +81,10 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 
 
 def main():
-    exp_name = 'exp8b'
-    x_name = "T_max"
+    exp_name = 'exp9b'
+    x_name = "delta"
     args = parse_args()
-    params = [5 + i*2 for i in range(21)]
+    params = [0 + i*2 for i in range(18)]
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()

@@ -9,11 +9,13 @@ import graph_utils
 
 
 def run():
-    exp = 'exp7'
+    exp = 'exp8'
     os.makedirs(exp, exist_ok=True)
     args = main.parse_args()
-    args.delta = 13
-    args.T_min = 5
+    args.normal_std = 50/4
+    args.mode = 'normal'
+    args.delta = 20
+    args.T_min = 10
     args.count_cropped = 'true'
     args.count_cropped2 = 'DRO'
     g = graph_utils.create_fc_graph(args.h, args.w)

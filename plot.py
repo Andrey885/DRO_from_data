@@ -88,7 +88,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         plotly.graph_objects.Scatter(
             x=x,
             y=y_dro,
-            line=dict(color='rgb(0,250,0)'),
+            line=dict(color='rgb(0,87,31)'),
             mode=args.plot_mode,
             name=data_passed_as_dro_name
         )
@@ -116,7 +116,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         if count_percentage:
             third_axis_title = 'equal rate'
         elif count_costs:
-            third_axis_title = 'nominal costs'
+            third_axis_title = 'expected costs'
         elif args.count_cropped == 'true':
             third_axis_title = 'truncated DRO'
         graphs.extend([plotly.graph_objects.Scatter(
@@ -139,16 +139,17 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
                       xaxis_title=x_name,
-                      yaxis_title=y_axis)
+                      yaxis_title=y_axis,
+                      plot_bgcolor='rgba(200,200,200,0)')
     plotly.io.write_image(fig, f"{exp}/graph_{title}.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    exp = 'exp8b'
+    exp = 'exp7'
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
     args.costs = 'false'
     title = "loss" if args.costs == 'false' else 'costs'
-    x_name = "delta"
+    x_name = "T_min"
     main(exp, x_name, title, args, count_costs = args.costs == 'true')
