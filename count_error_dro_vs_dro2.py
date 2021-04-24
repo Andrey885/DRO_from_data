@@ -14,7 +14,7 @@ def run():
     args = main.parse_args()
     args.normal_std = 50/4
     args.mode = 'normal'
-    args.w = agrs.h = 3
+    args.w = args.h = 3
     args.delta = 20
     args.T_min = 10
     args.count_cropped = 'true'

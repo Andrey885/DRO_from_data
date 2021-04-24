@@ -35,13 +35,12 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.mean(solutions_dro_cropped)), axis=0)
         std_hoef = np.median(np.abs(solutions_hoef - np.mean(solutions_hoef)), axis=0)
     if count_costs:
-        solutions_hoef = c_worst_hoef[:, -3, :]
-        solutions_dro = c_worst_dro[:, -3, :]
-        solutions_dro_cropped = c_bar[:, -3, :]
+        solutions_hoef = np.squeeze(c_worst_hoef[:, params==25, :])
+        solutions_dro = np.squeeze(c_worst_dro[:, params==25, :])
+        solutions_dro_cropped = np.squeeze(c_bar[:, params==25, :])
         # std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef, axis=0)), axis=0)
         # std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro, axis=0)), axis=0)
         # std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped, axis=0)), axis=0)
-        # std_dro_cropped = np.zeros(len(std_hoef))
         std_dro = std_dro_cropped = std_hoef = np.zeros(solutions_dro_cropped.shape[1])
     mean_hoef = np.mean(solutions_hoef, axis=0)
     mean_dro = np.mean(solutions_dro, axis=0)
@@ -53,7 +52,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
     y_axis = "Nominal relative loss"
     if count_costs:
         params = np.linspace(0, c_worst_dro.shape[-1] - 1, c_worst_dro.shape[-1]).astype(int)
-        y_axis = "Costs estimation"
+        y_axis = "Expected costs"
         x_name = "arc index (in the sorted array)"
     if count_percentage == 'true':
         y_axis = "Outperforming rate"
@@ -117,14 +116,17 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
     if np.std(y_dro_cropped) != 0:
         if count_percentage:
             third_axis_title = 'equal rate'
+            third_axis_line_dict = dict(color='rgb(0,0,250)')
         elif count_costs:
             third_axis_title = 'expected costs'
+            third_axis_line_dict = dict(color='rgb(0,0,0)')
         elif args.count_cropped == 'true':
             third_axis_title = 'truncated DRO'
+            third_axis_line_dict = dict(color='rgb(0,0,250)')
         graphs.extend([plotly.graph_objects.Scatter(
             x=x,
             y=y_dro_cropped,
-            line=dict(color='rgb(0,0,250)'),
+            line=third_axis_line_dict,
             mode=args.plot_mode,
             name=third_axis_title
         )])
@@ -137,7 +139,6 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
                 line=dict(color='rgba(255,255,255,0)'),
                 hoverinfo="skip",
                 showlegend=False,
-
             ))
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
@@ -148,7 +149,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
 
 
 if __name__ == '__main__':
-    exp = 'exp6'
+    exp = 'exp2a_fixed_p'
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)
