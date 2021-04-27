@@ -57,9 +57,9 @@ def run():
         )]
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
-                      xaxis_title=x_name,
-                      yaxis_title=y_axis,
                       plot_bgcolor='rgba(200,200,200,0)')
+    fig.update_xaxes(title_text=x_name, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
+    fig.update_yaxes(title_text=y_axis, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
 
     plotly.io.write_image(fig, f"{exp}/graph.jpg", width=1280, height=640)
 
