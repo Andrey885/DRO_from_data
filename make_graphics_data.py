@@ -5,6 +5,7 @@ from multiprocessing import Pool
 from functools import partial
 import networkx
 import json
+from argparse import Namespace
 from main import run_graph, parse_args
 import graph_utils
 import plot
@@ -20,7 +21,6 @@ def run_one_exp(g, edges_num_dict, args, start_node, all_paths, x_name, params, 
     if x_name != 'T_max':
         args.T_max = int(args.T_min + args.delta)
     _, _, _, _, _, _, _, fixed_p = run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=all_paths)
-    # fixed_p = None
     for param in params:
         setattr(args, x_name, param)
         if x_name != 'T_max':
@@ -80,16 +80,22 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_hoef, c_worst_dro, c_bar
 
 
-def main():
-    exp_name = 'exp2b'
-    x_name = "T_min"
-    args = parse_args()
-    params = [5 + i*2 for i in range(16)]
+def run_all_exps():
+    exp_names = [f[:-5] for f in os.listdir("figure_configs")]
+    exp_names.sort()
+    for exp_name in exp_names[-1:]:
+        args = json.load(open(f'figure_configs/{exp_name}.json', 'r'))
+        x_name = args['changed_parameter']
+        params = args["changed_parameter_values"]
+        args = Namespace(**args)
+        main(exp_name, x_name, args, params)
+
+
+def main(exp_name, x_name, args, params):
     print(f"Running exp with param {x_name}", params)
     if args.debug != '':
         exit()
-    run_dro_truncated_title = ' vs DRO_truncated' if args.count_cropped == 'true' else ''
-    title = f"Hoeffding vs DRO{run_dro_truncated_title}, {args.mode}, {x_name}"
+    title = "loss"
     os.makedirs(exp_name, exist_ok=True)
 
     with open(f'{exp_name}/args.json', 'w') as f:
@@ -118,10 +124,10 @@ def main():
     count_percentage = args.percentage_mode == 'true'
     plot.main(exp_name, x_name, title, args)
     if count_costs:
-        plot.main(exp_name, x_name, title.replace(x_name, "costs"), args, count_costs=count_costs)
+        plot.main(exp_name, x_name, title.replace("loss", "costs"), args, count_costs=count_costs)
     if count_percentage:
         plot.main(exp_name, x_name, title + ' percentage', args, count_percentage=count_percentage)
 
 
 if __name__ == '__main__':
-    main()
+    run_all_exps()

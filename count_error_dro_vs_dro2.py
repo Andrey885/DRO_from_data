@@ -30,7 +30,7 @@ def run():
                                                                                                             args, start_node,
                                                                                                             finish_node, all_paths=all_paths)
     params = np.linspace(0, c_worst_dro.shape[-1] - 1, c_worst_dro.shape[-1]).astype(int)
-    y_axis = "Costs estimation"
+    y_axis = "Expected costs"
     x_name = "arc index (in the sorted array)"
     x = params.tolist()
     graphs = [

@@ -95,11 +95,12 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         )
         ]
     if np.max(std_dro) != 0:
-        graphs.extend([plotly.graph_objects.Scatter(
+        graphs.extend([
+            plotly.graph_objects.Scatter(
             x=x+x[::-1],  # x, then x reversed
             y=y_upper+y_lower[::-1],  # upper, then lower reversed
             fill='toself',
-            fillcolor='rgba(100,0,0,0.1)',
+            fillcolor=f'rgba{passed_as_hoeffding_dict["color"][3:-1]},0.1)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
@@ -108,7 +109,7 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             x=x+x[::-1],  # x, then x reversed
             y=y_upper_dro+y_lower_dro[::-1],  # upper, then lower reversed
             fill='toself',
-            fillcolor='rgba(0,100,0,0.1)',
+            fillcolor='rgba(0,87,31,0.2)',
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo="skip",
             showlegend=False
@@ -135,21 +136,22 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
                 x=x+x[::-1],  # x, then x reversed
                 y=y_upper_dro_cropped+y_lower_dro_cropped[::-1],  # upper, then lower reversed
                 fill='toself',
-                fillcolor='rgba(0,0,100,0.1)',
+                fillcolor= f'rgba{third_axis_line_dict["color"][3:-1]},0.1)',
                 line=dict(color='rgba(255,255,255,0)'),
                 hoverinfo="skip",
                 showlegend=False,
             ))
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
-                      xaxis_title=x_name,
-                      yaxis_title=y_axis,
                       plot_bgcolor='rgba(200,200,200,0)')
+    fig.update_xaxes(title_text=x_name, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
+    fig.update_yaxes(title_text=y_axis, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
+
     plotly.io.write_image(fig, f"{exp}/graph_{title}.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    exp = 'exp2a_fixed_p'
+    exp = 'exp9b'
     with open(f'{exp}/args.json', 'r') as f:
         args = json.load(f)
     args = Namespace(**args)

@@ -81,7 +81,7 @@ def create_normal_costs_reverse(m, d, T_min, T_max, std, verbose=False, fixed_p=
     fixed_p_accumulative = [] if fixed_p is None else fixed_p
     for a in range(m):
         if fixed_p is None:
-            mean = np.random.randint(1, d+1)
+            mean = (d-1)*np.random.rand() + 1
             fixed_p_accumulative.append(mean)
         else:
             mean = fixed_p[a]
@@ -127,7 +127,7 @@ def create_normal_costs(m, d=10, T_min=10, T_max=100, std=2, verbose=False, fixe
     full_p = [] if fixed_p is None else fixed_p
     for a in range(m):
         if fixed_p is None:
-            mean = np.random.randint(1, d+1)
+            mean = (d-1)*np.random.rand() + 1
         else:
             mean = fixed_p[a]
         p = count_disrete_gaussian_distribution(mean, std)
