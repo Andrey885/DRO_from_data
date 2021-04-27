@@ -83,7 +83,7 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
 def run_all_exps():
     exp_names = [f[:-5] for f in os.listdir("figure_configs")]
     exp_names.sort()
-    for exp_name in exp_names[-1:]:
+    for exp_name in exp_names:
         args = json.load(open(f'figure_configs/{exp_name}.json', 'r'))
         x_name = args['changed_parameter']
         params = args["changed_parameter_values"]
