@@ -143,19 +143,21 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
             ))
     fig = plotly.graph_objects.Figure(graphs)
     fig.update_layout(title='',
-                      plot_bgcolor='rgba(200,200,200,0)')
-    fig.update_xaxes(title_text=x_name, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
+                      plot_bgcolor='rgba(200,200,200,0)', legend = {'font': {'size': 18}})
+    fig.update_xaxes(title_text=x_name, title_font={"size":18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
     fig.update_yaxes(title_text=y_axis, title_font={"size": 18}, showline=True, linewidth=2, linecolor='black',tickfont=dict(size=16))
-
     plotly.io.write_image(fig, f"{exp}/graph_{title}.jpg", width=1280, height=640)
 
 
 if __name__ == '__main__':
-    exp = 'exp9b'
-    with open(f'{exp}/args.json', 'r') as f:
-        args = json.load(f)
-    args = Namespace(**args)
-    args.costs = 'false'
-    title = "loss" if args.costs == 'false' else 'costs'
-    x_name = args.changed_parameter
-    main(exp, x_name, title, args, count_costs = args.costs == 'true')
+    exps = [f for f in os.listdir('./') if f.startswith('exp') and f != 'exp8' and not f.startswith('experiments')]
+    for exp_name in exps:
+        with open(f'{exp_name}/args.json', 'r') as f:
+            args = json.load(f)
+        x_name = args['changed_parameter']
+        args = Namespace(**args)
+        title = "loss"
+        count_costs = args.costs == 'true'
+        main(exp_name, x_name, title, args)
+        if count_costs:
+            main(exp_name, x_name, title.replace("loss", "costs"), args, count_costs=count_costs)
