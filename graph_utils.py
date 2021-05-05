@@ -53,7 +53,7 @@ def make_flow_balance_constraints(variable_names, num_variables, edges_num_dict,
     return rows, senses, rhs, rownames
 
 
-def solve_shortest_path(weights, edges_num_dict, g, start_node, finish_node, verbose=False, y_star=None, c_bar=None):
+def solve_shortest_path(edges_num_dict, g, start_node, finish_node, weights, verbose=False, y_star=None, c_bar=None):
     """
     Solve the shortest path problem with cplex
     """
@@ -154,3 +154,64 @@ def create_fc_graph(h, w):
     g.add_node(node_num)
     [g.add_edge(last_layer_node, node_num) for last_layer_node in current_layer_nodes]
     return g
+
+
+def solve_knapsak(W, weights):
+    """
+    Solve the knapsak problem with cplex: minimize weights * x w.r.t. constraint w * x > W, x={0,1}
+    """
+    num_edges = len(weights)
+    w = np.zeros(len(weights))
+    s = 0
+    for i in range(len(weights)):
+        s += 1
+        w[i] = s
+        if s == 5:
+            s = 0
+    obj_coefficients = weights  # objective function weights.T @ path incidence vector
+
+    prob = cplex.Cplex()
+    prob.set_log_stream(None)  # turn off logs
+    prob.set_results_stream(None)
+    prob.set_warning_stream(None)
+    prob.objective.set_sense(prob.objective.sense.minimize)
+
+    variables_names = ['y' + str(i) for i in range(num_edges)]  # names of variables
+    prob.variables.add(obj=obj_coefficients, names=variables_names)
+    [prob.variables.set_types(i, prob.variables.type.binary) for i in range(num_edges)]  # set binary variables
+
+    # zero-one constrints
+    rhs1 = np.ones(num_edges, dtype=np.int32).tolist()  # right parts of constraints
+    senses1 = 'L' * num_edges  # all constraints are '<='
+    rownames1 = ['b'+str(i+1) for i in range(num_edges)]  # names of constraints
+    rows1 = []
+    for i in range(num_edges):
+        a = np.zeros(num_edges)
+        a[i] = 1
+        rows1.append([variables_names, a.tolist()])
+
+    rhs2 = np.zeros(num_edges, dtype=np.int32).tolist()  # right parts of constraints
+    senses2 = 'G' * num_edges  # all constraints are '>='
+    rownames2 = ['c'+str(i+1) for i in range(num_edges)]  # names of constraints
+    rows2 = []
+    for i in range(num_edges):
+        a = np.zeros(num_edges)
+        a[i] = 1
+        rows2.append([variables_names, a.tolist()])
+
+    rhs3 = [W]  # right parts of constraints
+    senses3 = 'G'  # all constraints are '>='
+    rownames3 = ['d']  # names of constraints
+    rows3 = [[variables_names, w]]
+    # flow-balance constraints
+    rows = rows1 + rows2 + rows3
+    senses = senses1 + senses2 + senses3
+    rhs = rhs1 + rhs2 + rhs3
+    rownames = rownames1 + rownames2 + rownames3
+
+    prob.linear_constraints.add(lin_expr=rows, senses=senses,
+                                rhs=rhs, names=rownames)
+    prob.solve()
+    solution = prob.solution.get_objective_value()
+    values = prob.solution.get_values()
+    return solution, values

@@ -15,6 +15,7 @@
     "delta": 10,
     "mode": "binomial_with_binomial_T",
     "percentage_mode": "false",
+    "problem": "shortest_path",
     "plot_mode": "lines",
     "costs": "false",
     "changed_parameter": "T_min",

@@ -13,6 +13,7 @@
     "normal_std": 12.5,
     "num_exps": 200,
     "delta": 10,
+    "problem": "shortest_path",
     "mode": "normal_reverse",
     "percentage_mode": "false",
     "plot_mode": "lines",

@@ -35,9 +35,9 @@ def main(exp, x_name, title, args, count_percentage=False, count_costs=False):
         std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.mean(solutions_dro_cropped)), axis=0)
         std_hoef = np.median(np.abs(solutions_hoef - np.mean(solutions_hoef)), axis=0)
     if count_costs:
-        solutions_hoef = np.squeeze(c_worst_hoef[:, params==25, :])
-        solutions_dro = np.squeeze(c_worst_dro[:, params==25, :])
-        solutions_dro_cropped = np.squeeze(c_bar[:, params==25, :])
+        solutions_hoef = np.squeeze(c_worst_hoef[:, np.argmin(np.abs(params-25)), :])
+        solutions_dro = np.squeeze(c_worst_dro[:, np.argmin(np.abs(params-25)), :])
+        solutions_dro_cropped = np.squeeze(c_bar[:, np.argmin(np.abs(params-25)), :])
         # std_hoef = np.median(np.abs(solutions_hoef - np.median(solutions_hoef, axis=0)), axis=0)
         # std_dro = np.median(np.abs(solutions_dro - np.median(solutions_dro, axis=0)), axis=0)
         # std_dro_cropped = np.median(np.abs(solutions_dro_cropped - np.median(solutions_dro_cropped, axis=0)), axis=0)

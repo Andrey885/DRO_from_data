@@ -80,11 +80,11 @@ def run_experiments(args, g, edges_num_dict, start_node, finish_node, x_name, pa
     return solutions_hoef, solutions_dro, solutions_dro_cropped, c_worst_hoef, c_worst_dro, c_bar
 
 
-def run_all_exps():
-    exp_names = [f[:-5] for f in os.listdir("figure_configs")]
+def run_all_exps(config_folder):
+    exp_names = [f[:-5] for f in os.listdir(config_folder)]
     exp_names.sort()
     for exp_name in exp_names:
-        args = json.load(open(f'figure_configs/{exp_name}.json', 'r'))
+        args = json.load(open(f'{config_folder}/{exp_name}.json', 'r'))
         x_name = args['changed_parameter']
         params = args["changed_parameter_values"]
         args = Namespace(**args)
@@ -130,4 +130,5 @@ def main(exp_name, x_name, args, params):
 
 
 if __name__ == '__main__':
-    run_all_exps()
+    # run_all_exps("figure_configs")
+    run_all_exps("figure_configs_knapsak")

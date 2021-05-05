@@ -299,11 +299,13 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
                                                                                               T_max=args.T_max,
                                                                                               verbose=verbose,
                                                                                               fixed_p=fixed_p)
-
+    if args.problem == 'shortest_path':
+        combinatorial_solver = functools.partial(graph_utils.solve_shortest_path, edges_num_dict, g,
+                                                 start_node, finish_node)
+    else:
+        combinatorial_solver = functools.partial(graph_utils.solve_knapsak, args.W)
     # Nominal
-    nominal_expected_loss, path_c_bar = graph_utils.solve_shortest_path(c_bar.astype(float), edges_num_dict, g,
-                                                                        start_node, finish_node,
-                                                                        verbose=False)  # nominal solution
+    nominal_expected_loss, path_c_bar = combinatorial_solver(c_bar.astype(float))  # nominal solution
 
     min_length = min([c.shape[0] for c in c_hat])
     c_hat_cropped = np.array([c[:min_length] for c in c_hat])
@@ -315,8 +317,7 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
         # run DRO cropped 2 passed as Hoeffding
         q_hat = get_q_distribution(c_hat_cropped, args.d)
         c_worst_hoef = get_c_worst_DRO(q_hat, args.alpha, T_cropped)
-    _, path_c_worst_hoefding = graph_utils.solve_shortest_path(c_worst_hoef.astype(float), edges_num_dict, g,
-    start_node, finish_node, verbose=False)
+    _, path_c_worst_hoefding = combinatorial_solver(c_worst_hoef.astype(float))
     expected_loss_hoeffding = np.sum(path_c_worst_hoefding * c_bar)
     if args.count_cropped2 != 'Hoeffding':
         # DRO
@@ -325,14 +326,14 @@ def run_graph(g, edges_num_dict, args, start_node, finish_node, all_paths=None, 
     else:
         # run hoeffding passed as DRO
         c_worst_dro = get_c_worst_hoefding(c_hat_cropped, T_cropped, m, d=args.d, alpha=args.alpha)
-    _, path_c_worst_dro = graph_utils.solve_shortest_path(c_worst_dro.astype(float), edges_num_dict, g, start_node,
-                                                          finish_node, verbose=False)
+    _, path_c_worst_dro = combinatorial_solver(c_worst_dro.astype(float))
 
     expected_loss_dro = np.sum(path_c_worst_dro * c_bar)
     # DRO on cropped data (compare with strongly optimal solution)
     min_length = min([c.shape[0] for c in c_hat])
     c_hat_cropped = np.array([c[:min_length] for c in c_hat])
     if args.count_cropped == 'true':
+        assert args.problem == 'shortest_path', "DRO cropped is not implemented for knapsak problem"
         path_c_worst_dro_cropped = run_DRO_cropped(c_hat_cropped, edges_num_dict, args, all_paths)
         expected_loss_dro_cropped = np.sum(path_c_worst_dro_cropped * c_bar)
     else:
@@ -356,12 +357,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Experimental part for paper "DRO from data"')
     parser.add_argument('-d', '--debug', type=str, default='', help='debug mode', choices=['', 'true'])
     parser.add_argument('--num_workers', type=int, default=11, help='number of parallel jobs')
-    parser.add_argument('--h', type=int, default=3,
+    parser.add_argument('--h', type=int, default=4,
                         help='h fully-connected layers + 1 start node + 1 finish node in graph')
     parser.add_argument('--w', type=int, default=3, help='num of nodes in each layer of generated graph')
+    parser.add_argument('--W', type=int, default=30, help='budget in knapsak problem')
     parser.add_argument('--d', type=int, default=50, help='num of different possible weights values')
     parser.add_argument('--T_min', type=int, default=30, help='min samples num')
     parser.add_argument('--T_max', type=int, default=35, help='max samples num')
+    parser.add_argument('--problem', type=str, default='shortest_path', help='The problem to solve on graph',
+                        choices=['knapsak', 'shortest_path'])
     parser.add_argument('--count_cropped', type=str, default='true',
                         help='True if count cropped baseline method (computationally consuming)')
     parser.add_argument('--count_cropped2', type=str, default='DRO',
