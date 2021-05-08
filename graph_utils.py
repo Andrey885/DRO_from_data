@@ -161,13 +161,7 @@ def solve_knapsak(W, weights):
     Solve the knapsak problem with cplex: minimize weights * x w.r.t. constraint w * x > W, x={0,1}
     """
     num_edges = len(weights)
-    w = np.zeros(len(weights))
-    s = 0
-    for i in range(len(weights)):
-        s += 1
-        w[i] = s
-        if s == 5:
-            s = 0
+    w = np.ones(len(weights))
     obj_coefficients = weights  # objective function weights.T @ path incidence vector
 
     prob = cplex.Cplex()
@@ -180,35 +174,11 @@ def solve_knapsak(W, weights):
     prob.variables.add(obj=obj_coefficients, names=variables_names)
     [prob.variables.set_types(i, prob.variables.type.binary) for i in range(num_edges)]  # set binary variables
 
-    # zero-one constrints
-    rhs1 = np.ones(num_edges, dtype=np.int32).tolist()  # right parts of constraints
-    senses1 = 'L' * num_edges  # all constraints are '<='
-    rownames1 = ['b'+str(i+1) for i in range(num_edges)]  # names of constraints
-    rows1 = []
-    for i in range(num_edges):
-        a = np.zeros(num_edges)
-        a[i] = 1
-        rows1.append([variables_names, a.tolist()])
-
-    rhs2 = np.zeros(num_edges, dtype=np.int32).tolist()  # right parts of constraints
-    senses2 = 'G' * num_edges  # all constraints are '>='
-    rownames2 = ['c'+str(i+1) for i in range(num_edges)]  # names of constraints
-    rows2 = []
-    for i in range(num_edges):
-        a = np.zeros(num_edges)
-        a[i] = 1
-        rows2.append([variables_names, a.tolist()])
-
-    rhs3 = [W]  # right parts of constraints
-    senses3 = 'G'  # all constraints are '>='
-    rownames3 = ['d']  # names of constraints
-    rows3 = [[variables_names, w]]
-    # flow-balance constraints
-    rows = rows1 + rows2 + rows3
-    senses = senses1 + senses2 + senses3
-    rhs = rhs1 + rhs2 + rhs3
-    rownames = rownames1 + rownames2 + rownames3
-
+    rhs = [W]  # right parts of constraints
+    senses = 'G'  # all constraints are '>='
+    rownames = ['d']  # names of constraints
+    rows = [[variables_names, w]]
+    
     prob.linear_constraints.add(lin_expr=rows, senses=senses,
                                 rhs=rhs, names=rownames)
     prob.solve()
